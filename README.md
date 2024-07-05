@@ -1,6 +1,5 @@
-Certainly! Here's a comprehensive README.md that combines all the information we've discussed:
+Certainly! Here's the README formatted properly for direct copy-pasting into GitHub's README section:
 
-```markdown
 # Speech Recognition and Translation Web Application
 
 This Flask-based web application performs real-time speech recognition and translates predefined sentences into multiple languages.
@@ -135,4 +134,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Vosk](https://github.com/alphacep/vosk-api) for the speech recognition model
 - [Flask](https://flask.palletsprojects.com/) for the web framework
 - [PyAudio](https://people.csail.mit.edu/hubert/pyaudio/) for audio input handling
-
