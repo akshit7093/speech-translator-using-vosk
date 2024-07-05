@@ -48,7 +48,7 @@ final_proj/
 ├── sentences/             # Text files for each sentence and language
 ├── templates/             # HTML templates
 ├── vosk-model-small-en-us-0.15/  # Vosk model directory
-├── speech_app.py          # Main Flask application
+├── app.py          # Main Flask application
 ├── requirements.txt       # Python dependencies
 └── README.md              # This file
 ```
@@ -62,7 +62,7 @@ final_proj/
    - Place text files for each language in these subdirectories.
 
 2. Configure the application:
-   - Open `speech_app.py`.
+   - Open `app.py`.
    - Verify paths to the model, audio, and sentences directories.
    - Ensure the list of predefined sentences and supported languages is up to date.
 
@@ -74,7 +74,7 @@ final_proj/
 
 1. Run the Flask application:
    ```
-   python speech_app.py
+   python app.py
    ```
 
 2. Open a web browser and navigate to `http://127.0.0.1:5000/`
