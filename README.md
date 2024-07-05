@@ -21,7 +21,7 @@ This Flask-based web application performs real-time speech recognition and trans
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/speech-recognition-translation-app.git
+   git clone [https://github.com/yourusername/speech-recognition-translation-app.git](https://github.com/akshit7093/lang_convert.git)
    cd speech-recognition-translation-app
    ```
 
