@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Converter</title>
+    <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Language Converter</h1>
+        <div class="dropdown">
+            <select id="sentenceDropdown">
+                <option value="">Select a sentence</option>
+                <option value="How_are_you">How are you</option>
+                <option value="Hello">Hello</option>
+                <option value="My_name_is">My name is</option>
+            </select>
+        </div>
+        <div class="dropdown">
+            <select id="languageDropdown">
+                <option value="Hindi">Hindi</option>
+                <option value="Bhutanese">Bhutanese</option>
+                <option value="French">French</option>
+                <option value="Apatani">Apatani</option>
+                <!-- New languages -->
+                <!-- <option value="Kurukh">Kurukh (Oraon)</option>
+                <option value="Toda">Toda</option>
+                <option value="Gondi">Gondi</option>
+                <option value="Khasi">Khasi</option>
+                <option value="Manipuri">Manipuri (Meitei)</option>
+                <option value="Tulu">Tulu</option>
+                <option value="Bhili">Bhili</option>
+                <option value="Kurumba">Kurumba</option>
+                <option value="Bodo">Bodo</option>
+                <option value="Ao">Ao</option> -->
+            </select>
+        </div>
+        <button id="proceedBtn">Proceed</button>
+        <div id="output"></div>
+        <audio id="audioPlayer" controls style="display: none;"></audio>
+    </div>
+    <script src="../static/js/app.js"></script>
+</body>
+</html>
