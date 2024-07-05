@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Language Selector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        #device-form {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #transcription {
+            margin-top: 20px;
+            font-size: 1.2em;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .text-content {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio Language Selector</h1>
+    <div id="device-form">
+        <label for="device_index">Select Input Device:</label>
+        <select name="device_index" id="device_index">
+            {% for device in devices %}
+                <option value="{{ loop.index0 }}">{{ device }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <label for="language_id">Select Language:</label>
+        <select name="language_id" id="language_id">
+            {% for id, name in languages.items() %}
+                <option value="{{ id }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <button type="button" id="start-button">Start</button>
+    </div>
+    
+    <h2>Latest Transcription:</h2>
+    <div id="transcription">No transcription yet</div>
+    
+    <div id="text-content" class="text-content"></div>
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startButton = document.getElementById('start-button');
+            const deviceSelect = document.getElementById('device_index');
+            const languageSelect = document.getElementById('language_id');
+            const transcriptionDiv = document.getElementById('transcription');
+            const textContentDiv = document.getElementById('text-content');
+            const audioPlayer = document.getElementById('audioPlayer');
+
+            let transcriptionInterval;
+            let lastPlayedSentence = null;
+
+            startButton.addEventListener('click', function() {
+                const deviceIndex = deviceSelect.value;
+                const languageId = languageSelect.value;
+
+                // Reset only necessary elements
+                transcriptionDiv.innerText = 'No transcription yet';
+                textContentDiv.innerHTML = '';
+                audioPlayer.pause();
+                audioPlayer.src = '';
+                lastPlayedSentence = null;
+
+                fetch('/select_device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `device_index=${deviceIndex}&language_id=${languageId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log('Device and language updated successfully');
+                        startTranscriptionPolling();
+                    } else {
+                        console.log('Error updating device and language');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+
+            async function fetchAudio(sentence, language) {
+                const response = await fetch('/get_audio_path', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `sentence=${sentence}&language=${language}`
+                });
+                const data = await response.json();
+                if (data.audioPath) {
+                    console.log(`Playing audio from: ${data.audioPath}`);
+                    audioPlayer.src = data.audioPath;
+                    audioPlayer.play();
+                } else {
+                    console.log('Audio file not found');
+                }
+            }
+
+            async function fetchTranscription() {
+                const response = await fetch('/get_transcription');
+                const data = await response.json();
+                transcriptionDiv.innerText = data.transcription;
+
+                const predefinedSentences = [
+                    "hello", "goodbye", "how are you", "good wishes",
+                    "i will drink water", "i will have food", "my name is",
+                    "thank you", "will you drink water", "will you have food"
+                ];
+
+                for (const sentence of predefinedSentences) {
+                    if (data.transcription.toLowerCase().includes(sentence) && sentence !== lastPlayedSentence) {
+                        fetchAudio(sentence, languageSelect.value);
+                        lastPlayedSentence = sentence;
+                        break;
+                    }
+                }
+
+                if (!predefinedSentences.some(sentence => data.transcription.toLowerCase().includes(sentence))) {
+                    lastPlayedSentence = null;
+                }
+            }
+
+            async function fetchTextContent() {
+                const response = await fetch('/get_text_content');
+                const data = await response.json();
+                textContentDiv.innerHTML = data.data1;
+            }
+
+            function startTranscriptionPolling() {
+                // Clear existing interval if it exists
+                if (transcriptionInterval) {
+                    clearInterval(transcriptionInterval);
+                }
+                // Start a new polling interval
+                transcriptionInterval = setInterval(() => {
+                    fetchTranscription();
+                    fetchTextContent();
+                }, 1000);
+            }
+
+            languageSelect.addEventListener('change', fetchTextContent);
+        });
+    </script>
+</body>
+</html>
