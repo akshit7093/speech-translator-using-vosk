@@ -146,7 +146,20 @@
                     console.log('Audio file not found');
                 }
             }
-
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+                if (mediaRecorder.state === "recording") {
+                    const audioBlob = new Blob(audioChunks, { type: mimeType });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64data = reader.result.split(',')[1]; 
+                        // Emit the base64 encoded string directly
+                        socket.emit('audio', base64data); 
+                    };
+                    reader.readAsDataURL(audioBlob);
+                    audioChunks = [];
+                }
+            };
             async function fetchTranscription() {
                 const response = await fetch('/get_transcription');
                 const data = await response.json();
