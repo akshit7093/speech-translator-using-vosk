@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Stream</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .disconnected {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        #audioLevel {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            margin: 10px 0;
+        }
+        #audioLevelBar {
+            height: 100%;
+            width: 0;
+            background-color: #4CAF50;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Stream</h1>
+        <div id="status" class="disconnected">Disconnected</div>
+        <button id="startButton">Start Audio</button>
+        <button id="stopButton" disabled>Stop Audio</button>
+        <div>
+            <h3>Audio Level</h3>
+            <div id="audioLevel">
+                <div id="audioLevelBar"></div>
+            </div>
+        </div>
+        <div id="audioDatatype">Audio Datatype: Not started</div>
+    </div>
+
+    <script>
+        // Update this with your ngrok or lt URL
+        const socket = io()
+
+        let mediaRecorder;
+        let audioContext;
+        let analyser;
+        let dataArray;
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDiv = document.getElementById('status');
+        const audioLevelBar = document.getElementById('audioLevelBar');
+        const audioDatatypeDiv = document.getElementById('audioDatatype');
+        const audioFormat = 'audio/pcm'; // Custom audio format (PCM, Int16)
+
+        function updateStatus(connected) {
+            statusDiv.textContent = connected ? 'Connected' : 'Disconnected';
+            statusDiv.className = connected ? 'connected' : 'disconnected';
+        }
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            updateStatus(true);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            updateStatus(false);
+        });
+
+        socket.on('transcription', (data) => {
+            console.log('Received transcription: ', data.transcription);
+            // Update transcription data on your UI here
+        });
+
+        function convertFloat32ToInt16(buffer) {
+            const l = buffer.length;
+            const buf = new Int16Array(l);
+            for (let i = 0; i < l; i++) {
+                buf[i] = Math.max(-1, Math.min(1, buffer[i])) * 0x7FFF; // Ensure values are in Int16 range
+            }
+            return buf.buffer;
+        }
+
+        function updateAudioLevel() {
+            if (analyser) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = dataArray.reduce((a, b) => a + b, 0);
+                let average = sum / dataArray.length;
+                let level = (average / 256) * 100;
+                audioLevelBar.style.width = level + '%';
+            }
+            requestAnimationFrame(updateAudioLevel);
+        }
+
+        startButton.onclick = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                // Create MediaRecorder to record the audio data
+                mediaRecorder = new MediaRecorder(stream, { mimeType: audioFormat });
+                
+                const audioDatatype = mediaRecorder.mimeType;
+                audioDatatypeDiv.textContent = `Audio Datatype: ${audioDatatype}`;
+                console.log(`Audio Datatype: ${audioDatatype}`);
+
+                mediaRecorder.ondataavailable = event => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64data = reader.result.split(',')[1]; // Get the audio data as base64
+                        socket.emit('audio', { data: base64data, datatype: audioDatatype });
+                    };
+
+                    // Convert raw PCM data (Blob) into a buffer and process as Int16
+                    const audioBlob = event.data;
+                    reader.readAsDataURL(audioBlob); // Converts Blob to base64
+                };
+
+                // Start recording and capture chunks every 100ms
+                mediaRecorder.start(100);
+
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                updateAudioLevel();
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                alert("Error accessing microphone. Please ensure you have given permission.");
+            }
+        };
+
+        stopButton.onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                analyser = null;
+            }
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            audioLevelBar.style.width = '0%';
+            audioDatatypeDiv.textContent = 'Audio Datatype: Not started';
+        };
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+        });
+
+        socket.on('error', (error) => {
+            console.error('Socket error:', error);
+        });
+    </script>
+</body>
+</html>

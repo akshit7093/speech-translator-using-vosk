@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Call Room</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status-bar {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #leaveButton {
+            background-color: #f44336;
+        }
+        #roomInfo {
+            margin-bottom: 20px;
+        }
+        #roomUrl {
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .participant {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 5px 10px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+        }
+        #audioLevel {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            margin-top: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #audioLevelBar {
+            height: 100%;
+            width: 0;
+            background-color: #4CAF50;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-bar">
+            <strong>Status:</strong> <span id="connectionStatus">Disconnected</span>
+        </div>
+        
+        <div id="roomInfo">
+            <h3>Room URL (Share this to invite others):</h3>
+            <input type="text" id="roomUrl" readonly>
+        </div>
+        
+        <div class="controls">
+            <button id="joinButton">Join Call</button>
+            <button id="leaveButton" disabled>Leave Call</button>
+        </div>
+        
+        <div>
+            <h3>Participants:</h3>
+            <div id="participants"></div>
+        </div>
+        
+        <div>
+            <h3>Audio Level</h3>
+            <div id="audioLevel">
+                <div id="audioLevelBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let mediaRecorder;
+        let audioChunks = [];
+        const joinButton = document.getElementById('joinButton');
+        const leaveButton = document.getElementById('leaveButton');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const roomUrl = document.getElementById('roomUrl');
+        const participants = document.getElementById('participants');
+        const audioLevelBar = document.getElementById('audioLevelBar');
+        
+        let currentRoom = '{{ room_id }}';
+
+        function updateConnectionStatus(status, connected) {
+            connectionStatus.textContent = status;
+            connectionStatus.style.color = connected ? '#4CAF50' : '#f44336';
+        }
+
+        function updateParticipants(clientId, joining) {
+            const participantElement = document.getElementById(`participant-${clientId}`);
+            if (joining && !participantElement) {
+                const span = document.createElement('span');
+                span.id = `participant-${clientId}`;
+                span.className = 'participant';
+                span.textContent = `User ${clientId.substr(0, 4)}`;
+                participants.appendChild(span);
+            } else if (!joining && participantElement) {
+                participantElement.remove();
+            }
+        }
+
+        async function startAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                const analyser = audioContext.createAnalyser();
+                mediaStreamSource.connect(analyser);
+                
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                    if (mediaRecorder.state === "recording") {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64data = reader.result.split(',')[1];
+                            socket.emit('voice', {
+                                audio: base64data,
+                                room: currentRoom
+                            });
+                        };
+                        reader.readAsDataURL(audioBlob);
+                        audioChunks = [];
+                    }
+                };
+                mediaRecorder.start(100);
+
+                updateAudioLevel(analyser);
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                alert("Failed to access microphone. Please ensure you have given permission and are using a supported browser.");
+            }
+        }
+
+        function updateAudioLevel(analyser) {
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            const renderAudioLevel = () => {
+                analyser.getByteTimeDomainData(dataArray);
+                const max = Math.max(...dataArray);
+                const level = (max / 128.0 - 1) * 50;
+                audioLevelBar.style.width = Math.min(level, 100) + '%';
+                requestAnimationFrame(renderAudioLevel);
+            };
+            renderAudioLevel();
+        }
+
+        joinButton.onclick = async () => {
+            await startAudioRecording();
+            socket.emit('join', { room_id: currentRoom });
+            joinButton.disabled = true;
+            leaveButton.disabled = false;
+        };
+
+        leaveButton.onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
+            socket.emit('leave', { room_id: currentRoom });
+            joinButton.disabled = false;
+            leaveButton.disabled = true;
+            participants.innerHTML = '';
+            audioLevelBar.style.width = '0%';
+        };
+
+        socket.on('connect', () => {
+            updateConnectionStatus('Connected', true);
+        });
+
+        socket.on('disconnect', () => {
+            updateConnectionStatus('Disconnected', false);
+        });
+
+        socket.on('room_joined', (data) => {
+            currentRoom = data.room_id;
+            roomUrl.value = `${window.location.origin}/${currentRoom}`;
+            updateParticipants(data.client_id, true);
+        });
+
+        socket.on('user_left', (data) => {
+            updateParticipants(data.client_id, false);
+        });
+
+        socket.on('voice', (data) => {
+            const audio = new Audio(`data:audio/webm;base64,${data.audio}`);
+            audio.play();
+        });
+    </script>
+</body>
+</html>
