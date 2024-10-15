@@ -45,10 +45,10 @@ def handle_audio_stream(data):
     audio_buffer.extend(data)
 
     # Process audio if enough data is available (e.g., 0.5 seconds worth)
-    while len(audio_buffer) >= 32000:  # 16000 samples/second * 0.5 seconds
+    while len(audio_buffer) >= 16000:  # 16000 samples/second * 0.5 seconds
         # Get 0.5 seconds worth of audio
-        audio_chunk = audio_buffer[:32000]
-        audio_buffer = audio_buffer[32000:]  # Remove the processed chunk
+        audio_chunk = audio_buffer[:16000]
+        audio_buffer = audio_buffer[16000:]  # Remove the processed chunk
 
         # Convert bytearray to bytes
         audio_chunk_bytes = bytes(audio_chunk)
