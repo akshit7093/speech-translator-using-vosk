@@ -70,7 +70,7 @@
                 .then(stream => {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                     const mediaStreamSource = audioContext.createMediaStreamSource(stream);
-                    const scriptProcessor = audioContext.createScriptProcessor(8192, 1, 1); // Use a smaller buffer size
+                    const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1); // Use a smaller buffer size
 
                     mediaStreamSource.connect(scriptProcessor);
                     scriptProcessor.connect(audioContext.destination);
