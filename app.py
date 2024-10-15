@@ -13,8 +13,13 @@ model = Model("vosk-model-small-en-us-0.15")
 recognizer = KaldiRecognizer(model, 16000)
 
 # Paths for predefined sentences, audio, etc.
+# Use os.path.join to set the base directory to avoid issues with different environments
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 audio_directory = os.path.join(BASE_DIR, "audio")
+
+# Check if audio directory exists, create it if not
+if not os.path.exists(audio_directory):
+    os.makedirs(audio_directory)
 
 predefined_sentences = [
     "hello", "goodbye", "how are you", "good wishes",
@@ -68,7 +73,6 @@ def handle_audio_stream(data):
             # Send the transcription result back to the client
             emit('transcription', {'transcription': transcription, 'matched_sentence': matched_sentence})
 
-
 # Route for the main page
 @app.route('/')
 def index():
@@ -99,4 +103,6 @@ def serve_audio(filename):
     return send_from_directory(audio_directory, filename)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    # Use environment variable for port, required for deployment platforms
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host='0.0.0.0', port=port)  # Ensure the app listens on all interfaces
