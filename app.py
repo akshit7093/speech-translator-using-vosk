@@ -6,21 +6,16 @@ import json
 import os
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="https://speech-translator-using-vosk.onrender.com")
-
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Load Vosk model
 model = Model("vosk-model-small-en-us-0.15")
 recognizer = KaldiRecognizer(model, 16000)
 
 # Paths for predefined sentences, audio, etc.
-# Use os.path.join to set the base directory to avoid issues with different environments
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 audio_directory = os.path.join(BASE_DIR, "audio")
-
-# Check if audio directory exists, create it if not
-if not os.path.exists(audio_directory):
-    os.makedirs(audio_directory)
+sentences_directory = os.path.join(BASE_DIR, "sentences")  # Directory for text files
 
 predefined_sentences = [
     "hello", "goodbye", "how are you", "good wishes",
@@ -74,6 +69,25 @@ def handle_audio_stream(data):
             # Send the transcription result back to the client
             emit('transcription', {'transcription': transcription, 'matched_sentence': matched_sentence})
 
+            # Update latest transcription and get text content
+            global latest_transcription, text_content
+            latest_transcription = transcription
+            text_content = display_text(matched_sentence) if matched_sentence else ""
+
+# Function to display text for a matched sentence
+def display_text(sentence):
+    # Construct the path to the text file based on the matched sentence and selected language
+    text_path = os.path.join(sentences_directory, sentence.replace(" ", "_"), f"{languages[selected_language]}.txt")
+
+    # Read and return the contents of the text file
+    if os.path.exists(text_path):
+        with open(text_path, 'r', encoding='utf-8') as file:
+            text_content = file.read()
+            return text_content
+    else:
+        print(f"Text file '{text_path}' not found.")
+        return None
+
 # Route for the main page
 @app.route('/')
 def index():
@@ -98,12 +112,27 @@ def get_text_content():
     global text_content
     return jsonify({'data1': text_content})
 
+# API for getting the audio path
+@app.route('/get_audio_path', methods=['POST'])
+def get_audio_path():
+    sentence = request.form['sentence']
+    language = request.form['language']
+
+    # Construct the path to the audio file based on the matched sentence and selected language
+    audio_filename = f"{sentence.replace(' ', '_')}/{languages[language]}.mp3"
+    audio_path = os.path.join(audio_directory, audio_filename)
+
+    # Check if the file exists and return its URL
+    if os.path.exists(audio_path):
+        audio_url = url_for('serve_audio', filename=audio_filename)
+        return jsonify({'audioPath': audio_url})
+    else:
+        return jsonify({'audioPath': None})
+
 # Serve audio files from the audio directory
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
     return send_from_directory(audio_directory, filename)
 
 if __name__ == '__main__':
-    # Use environment variable for port, required for deployment platforms
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host='0.0.0.0', port=port)  # Ensure the app listens on all interfaces
+    socketio.run(app, debug=True)

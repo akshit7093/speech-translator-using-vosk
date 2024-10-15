@@ -4,9 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Speech Recognition</title>
-    <script src="https://cdn.socket.io/5.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.3s ease;
+        }
 
+        h1 {
+            margin-bottom: 20px;
+            animation: fadeIn 1s ease;
+        }
 
+        label {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+
+        select, button {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin: 10px;
+        }
+
+        select:hover, button:hover {
+            background-color: #3a3a3a;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        p {
+            margin: 10px 0;
+            animation: fadeIn 1s ease;
+        }
+
+        audio {
+            margin-top: 20px;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            width: 100%;
+            max-width: 300px;
+            outline: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body>
     <h1>Live Transcription</h1>
@@ -14,25 +80,32 @@
     <label for="language_id">Select Language:</label>
     <select id="language_id">
         <option value="Apatani">Apatani</option>
-        <option value="Bhutanese">Bhutanese</option>
+        <!-- <option value="Bhutanese">Bhutanese</option>
         <option value="French">French</option>
-        <option value="Hindi">Hindi</option>
+        <option value="Hindi">Hindi</option> -->
         <option value="Monpa">Monpa</option>
     </select>
     <button id="start-button">Start Transcription</button>
 
     <p id="transcription">No transcription yet...</p>
+    <p id="textContent">Text content will appear here...</p>
     <audio id="audioPlayer" controls></audio>
 
     <script>
-        const socket = io.connect();
+        const socket = io(window.location.origin, {
+            transports: ['websocket'],
+            upgrade: false
+        });
+
         const startButton = document.getElementById('start-button');
         const languageSelect = document.getElementById('language_id');
         const transcriptionDiv = document.getElementById('transcription');
+        const textContentDiv = document.getElementById('textContent');
+        const audioPlayer = document.getElementById('audioPlayer');
 
-        let lastPlayedSentence = null;
+        // Set buffer size (in samples)
+        const BUFFER_SIZE = 2048; // You can adjust this value
 
-        // Function to send selected language to Flask
         function selectLanguage(languageId) {
             fetch('/select_language', {
                 method: 'POST',
@@ -52,48 +125,124 @@
             .catch(error => console.error('Error:', error));
         }
 
-        // Convert Float32 PCM to Int16 PCM
-        function convertFloat32ToInt16(buffer) {
-            const l = buffer.length;
-            const buf = new Int16Array(l);
-            for (let i = 0; i < l; i++) {
-                buf[i] = Math.max(-1, Math.min(1, buffer[i])) * 0x7FFF; // Ensure values are in Int16 range
-            }
-            return buf.buffer;
-        }
+        const audioWorkletCode = `
+            class AudioProcessor extends AudioWorkletProcessor {
+                constructor() {
+                    super();
+                    this.bufferSize = ${BUFFER_SIZE};
+                    this.buffer = new Float32Array(this.bufferSize);
+                    this.bufferIndex = 0;
+                }
 
-        // Start button listener
-        startButton.addEventListener('click', function() {
+                process(inputs, outputs, parameters) {
+                    const input = inputs[0];
+                    if (input.length > 0) {
+                        const inputChannel = input[0];
+                        for (let i = 0; i < inputChannel.length; i++) {
+                            this.buffer[this.bufferIndex] = inputChannel[i];
+                            this.bufferIndex++;
+
+                            if (this.bufferIndex >= this.bufferSize) {
+                                const int16Data = this.convertFloat32ToInt16(this.buffer);
+                                this.port.postMessage(int16Data.buffer, [int16Data.buffer]);
+                                this.bufferIndex = 0;
+                            }
+                        }
+                    }
+                    return true;
+                }
+                
+                convertFloat32ToInt16(buffer) {
+                    const int16Buffer = new Int16Array(buffer.length);
+                    for (let i = 0; i < buffer.length; i++) {
+                        const s = Math.max(-1, Math.min(1, buffer[i]));
+                        int16Buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    return int16Buffer;
+                }
+            }
+
+            registerProcessor('audio-processor', AudioProcessor);
+        `;
+
+        startButton.addEventListener('click', async function() {
             const languageId = languageSelect.value;
             selectLanguage(languageId);
 
-            // Request access to the user's microphone
-            navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } })
-                .then(stream => {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                    const mediaStreamSource = audioContext.createMediaStreamSource(stream);
-                    const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1); // Use a smaller buffer size
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                
+                const blob = new Blob([audioWorkletCode], { type: 'application/javascript' });
+                const workletUrl = URL.createObjectURL(blob);
 
-                    mediaStreamSource.connect(scriptProcessor);
-                    scriptProcessor.connect(audioContext.destination);
+                await audioContext.audioWorklet.addModule(workletUrl);
+                
+                const source = audioContext.createMediaStreamSource(stream);
+                const audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor', {
+                    outputChannelCount: [1],
+                    processorOptions: {
+                        bufferSize: BUFFER_SIZE
+                    }
+                });
+                
+                audioWorkletNode.port.onmessage = (event) => {
+                    socket.emit('audio_stream', event.data);
+                };
+                
+                source.connect(audioWorkletNode);
+                audioWorkletNode.connect(audioContext.destination);
 
-                    // Capture and process audio in real-time
-                    scriptProcessor.onaudioprocess = function(event) {
-                        const inputData = event.inputBuffer.getChannelData(0); // Float32 PCM
-                        const int16Data = convertFloat32ToInt16(inputData); // Convert to Int16
-
-                        // Send raw PCM data to Flask via WebSocket
-                        socket.emit('audio_stream', int16Data);
-                    };
-                })
-                .catch(err => console.log('Error accessing microphone: ', err));
+                console.log('Audio processing started with buffer size:', BUFFER_SIZE);
+            } catch (err) {
+                console.error('Error accessing microphone: ', err);
+            }
         });
 
-        // Handle transcription data from Flask
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
         socket.on('transcription', function(data) {
+            console.log('Received transcription:', data.transcription);
             transcriptionDiv.innerText = data.transcription;
 
-            // Additional handling for matched sentences can be added here
+            // Fetch the text content for the matched sentence
+            if (data.matched_sentence) {
+                fetch('/get_text_content')
+                    .then(response => response.json())
+                    .then(data => {
+                        textContentDiv.innerText = data.data1;
+                    })
+                    .catch(error => console.error('Error fetching text content:', error));
+
+                // Fetch the audio path
+                fetch('/get_audio_path', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `sentence=${data.matched_sentence}&language=${languageSelect.value}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.audioPath) {
+                        audioPlayer.src = data.audioPath;
+                        audioPlayer.play();
+                    } else {
+                        console.log('Audio not found for matched sentence');
+                    }
+                })
+                .catch(error => console.error('Error fetching audio path:', error));
+            }
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
         });
     </script>
 </body>
