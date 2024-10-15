@@ -6,8 +6,7 @@ import json
 import os
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="https://speech-translator-using-vosk.onrender.com")
-
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Load Vosk model
 model = Model("vosk-model-small-en-us-0.15")
