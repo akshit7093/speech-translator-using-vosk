@@ -3,36 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Speech Recognition</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #transcription {
-            margin-top: 20px;
-            font-size: 18px;
-            white-space: pre-wrap; /* Preserve line breaks */
-        }
-    </style>
-    <!-- Include the Socket.IO client library -->
+    <title>Speech Recognition</title>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>Real-time Speech-to-Text with Socket.IO</h1>
+    <h1>Live Transcription</h1>
+    
+    <label for="language_id">Select Language:</label>
+    <select id="language_id">
+        <option value="Apatani">Apatani</option>
+        <option value="Bhutanese">Bhutanese</option>
+        <option value="French">French</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Monpa">Monpa</option>
+    </select>
     <button id="start-button">Start Transcription</button>
-    <div id="transcription">Transcription will appear here...</div>
+
+    <p id="transcription">No transcription yet...</p>
+    <audio id="audioPlayer" controls></audio>
 
     <script>
+        const socket = io.connect();
         const startButton = document.getElementById('start-button');
+        const languageSelect = document.getElementById('language_id');
         const transcriptionDiv = document.getElementById('transcription');
-        let audioContext, mediaStream, socket, processor;
 
+        let lastPlayedSentence = null;
+
+        // Function to send selected language to Flask
+        function selectLanguage(languageId) {
+            fetch('/select_language', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `language_id=${languageId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Language updated successfully');
+                } else {
+                    console.log('Error updating language');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Convert Float32 PCM to Int16 PCM
         function convertFloat32ToInt16(buffer) {
             const l = buffer.length;
             const buf = new Int16Array(l);
@@ -42,72 +60,39 @@
             return buf.buffer;
         }
 
+        // Start button listener
         startButton.addEventListener('click', function() {
-            // Initialize Socket.IO
-            socket = io(); // Connect to the same origin
+            const languageId = languageSelect.value;
+            selectLanguage(languageId);
 
-            socket.on('connect', () => {
-                console.log('Socket.IO connection established');
-            });
-
-            socket.on('transcription', (data) => {
-                transcriptionDiv.innerText = 'Transcription: ' + data.transcription;
-            });
-
-            socket.on('disconnect', () => {
-                console.log('Socket.IO connection closed');
-            });
-
-            socket.on('error', (error) => {
-                console.error('Socket.IO Error: ', error);
-                cleanup(); // Stop and close the audio stream on error
-            });
-
-            // Capture audio from the microphone
+            // Request access to the user's microphone
             navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } })
-                .then((stream) => {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                    mediaStream = audioContext.createMediaStreamSource(stream);
-                    processor = audioContext.createScriptProcessor(8192, 1, 1); // Use a smaller buffer size
+                .then(stream => {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                    const mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                    const scriptProcessor = audioContext.createScriptProcessor(8192, 1, 1); // Use a smaller buffer size
 
-                    // Set up audio processing
-                    processor.onaudioprocess = (e) => {
-                        const inputData = e.inputBuffer.getChannelData(0);
-                        const int16Data = convertFloat32ToInt16(inputData);
-                        sendAudioData(int16Data);
+                    mediaStreamSource.connect(scriptProcessor);
+                    scriptProcessor.connect(audioContext.destination);
+
+                    // Capture and process audio in real-time
+                    scriptProcessor.onaudioprocess = function(event) {
+                        const inputData = event.inputBuffer.getChannelData(0); // Float32 PCM
+                        const int16Data = convertFloat32ToInt16(inputData); // Convert to Int16
+
+                        // Send raw PCM data to Flask via WebSocket
+                        socket.emit('audio_stream', int16Data);
                     };
-
-                    mediaStream.connect(processor);
-                    processor.connect(audioContext.destination);
                 })
-                .catch((err) => {
-                    console.error('Error accessing microphone: ', err);
-                    cleanup(); // Stop and close the audio stream on error
-                });
-
-            function sendAudioData(int16Data) {
-                if (socket.connected) {
-                    socket.emit('audio', int16Data); // Send audio data via Socket.IO
-                } else {
-                    console.log('Socket.IO is not connected. Current state: ' + socket.connected);
-                }
-            }
+                .catch(err => console.log('Error accessing microphone: ', err));
         });
 
-        // Function to cleanup and stop audio processing
-        function cleanup() {
-            if (processor) {
-                processor.disconnect();
-                processor.onaudioprocess = null;
-            }
-            if (mediaStream) {
-                mediaStream.disconnect();
-            }
-            if (audioContext) {
-                audioContext.close();
-            }
-            console.log('Audio stream stopped and cleaned up');
-        }
+        // Handle transcription data from Flask
+        socket.on('transcription', function(data) {
+            transcriptionDiv.innerText = data.transcription;
+
+            // Additional handling for matched sentences can be added here
+        });
     </script>
 </body>
 </html>

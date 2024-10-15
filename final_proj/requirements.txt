@@ -1,3 +1,7 @@
-Flask==2.3.2
-vosk==0.3.45
-PyAudio==0.2.13
+Flask
+vosk
+flask-socketio
+Flask-socketio
+eventlet
+numpy
+flask
