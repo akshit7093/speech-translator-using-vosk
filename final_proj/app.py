@@ -1,31 +1,27 @@
-import struct
-from flask import Flask, render_template, jsonify, request, send_from_directory, url_for
+from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
 from flask_socketio import SocketIO, emit
-from flask_cors import CORS  # Import CORS
 from vosk import Model, KaldiRecognizer
-import os
+import numpy as np
 import json
+import os
 
-# Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all domains
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Path to the Vosk model
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "vosk-model-small-en-us-0.15")
-model = Model(MODEL_PATH)
-
-# Global variables
+# Load Vosk model
+model = Model("vosk-model-small-en-us-0.15")
 recognizer = KaldiRecognizer(model, 16000)
-latest_transcription = ""
-text_content = ""
-selected_language = None
+
+# Paths for predefined sentences, audio, etc.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+audio_directory = os.path.join(BASE_DIR, "audio")
+
 predefined_sentences = [
     "hello", "goodbye", "how are you", "good wishes",
     "i will drink water", "i will have food", "my name is",
     "thank you", "will you drink water", "will you have food"
 ]
+
 languages = {
     "Apatani": "Apatani",
     "Bhutanese": "Bhutanese",
@@ -33,91 +29,74 @@ languages = {
     "Hindi": "Hindi",
     "Monpa": "Monpa"
 }
-audio_directory = os.path.join(BASE_DIR, "audio")
-sentences_directory = os.path.join(BASE_DIR, "sentences")
 
-# Initialize recognizer
-def initialize_recognizer():
-    global recognizer
-    recognizer = KaldiRecognizer(model, 16000)
+selected_language = None
+latest_transcription = ""
+text_content = ""
 
-# Route to handle audio data
-@socketio.on('audio')
-def handle_audio(data):
-    # Convert the received bytes to 16-bit PCM
-    pcm_data = struct.unpack('<' + ('h' * (len(data) // 2)), data)
-    pcm_bytes = struct.pack('<' + ('h' * len(pcm_data)), *pcm_data)
+# Buffer to store audio data
+audio_buffer = bytearray()
 
-    # Feed the PCM bytes into the recognizer
-    if recognizer.AcceptWaveform(pcm_bytes):
-        result = recognizer.Result()
-        result_json = json.loads(result)
-        transcription = result_json.get("text", "")
-        
-        # Send the transcription back to the client
-        emit('transcription', {"transcription": transcription})
+@socketio.on('audio_stream')
+def handle_audio_stream(data):
+    global audio_buffer, recognizer
 
-    # Handle partial results
-    else:
-        partial_result = recognizer.PartialResult()
-        emit('transcription', {"transcription": json.loads(partial_result).get("partial", "")})
+    # Append new audio data to the buffer
+    audio_buffer.extend(data)
 
-# Function to retrieve text content based on matched sentence
-def display_text(sentence):
-    global selected_language
+    # Process audio if enough data is available (e.g., 0.5 seconds worth)
+    while len(audio_buffer) >= 32000:  # 16000 samples/second * 0.5 seconds
+        # Get 0.5 seconds worth of audio
+        audio_chunk = audio_buffer[:32000]
+        audio_buffer = audio_buffer[32000:]  # Remove the processed chunk
 
-    text_path = os.path.join(sentences_directory, sentence.replace(" ", "_"), f"{languages[selected_language]}.txt")
-    if os.path.exists(text_path):
-        with open(text_path, 'r', encoding='utf-8') as file:
-            text_content = file.read()
-            return text_content
-    else:
-        print(f"Text file '{text_path}' not found.")
-        return None
+        # Convert bytearray to bytes
+        audio_chunk_bytes = bytes(audio_chunk)
 
-# Route to select language and reinitialize recognizer
+        # Feed the audio chunk to the recognizer
+        if recognizer.AcceptWaveform(audio_chunk_bytes):
+            result = json.loads(recognizer.Result())
+            transcription = result.get('text', '')
+
+            # Check if transcription matches a predefined sentence
+            matched_sentence = None
+            for sentence in predefined_sentences:
+                if sentence in transcription.lower():
+                    matched_sentence = sentence
+                    break
+
+            # Send the transcription result back to the client
+            emit('transcription', {'transcription': transcription, 'matched_sentence': matched_sentence})
+
+
+# Route for the main page
+@app.route('/')
+def index():
+    return render_template('index.html', languages=languages)
+
+# API for selecting language
 @app.route('/select_language', methods=['POST'])
 def select_language():
-    global selected_language, latest_transcription, text_content
-    new_language = request.form['language_id']
-
-    # Only reinitialize if the language has changed
-    if new_language != selected_language:
-        selected_language = new_language
-        initialize_recognizer()
-        latest_transcription = ""
-        text_content = ""
-
+    global selected_language
+    selected_language = request.form['language_id']
     return jsonify({'status': 'success'})
 
-# Route to get text content based on the transcription
+# API to get the latest transcription
+@app.route('/get_transcription', methods=['GET'])
+def get_transcription():
+    global latest_transcription
+    return jsonify({'transcription': latest_transcription})
+
+# API to get the text content for a matched sentence
 @app.route('/get_text_content', methods=['GET'])
 def get_text_content():
     global text_content
     return jsonify({'data1': text_content})
 
-# Route to serve the audio files based on the transcription
-@app.route('/get_audio_path', methods=['POST'])
-def get_audio_path():
-    sentence = request.form['sentence']
-    language = request.form['language']
-    audio_filename = f"{sentence.replace(' ', '_')}/{languages[language]}.mp3"
-    audio_path = os.path.join(audio_directory, audio_filename)
-
-    if os.path.exists(audio_path):
-        audio_url = url_for('serve_audio', filename=audio_filename)
-        return jsonify({'audioPath': audio_url})
-    else:
-        return jsonify({'audioPath': None})
-
-# Serve the audio file
+# Serve audio files from the audio directory
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
     return send_from_directory(audio_directory, filename)
-
-@app.route('/')
-def index():
-    return render_template('index.html', languages=languages)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
