@@ -5,3 +5,4 @@ Flask-socketio
 eventlet
 numpy
 flask
+gunicorn
