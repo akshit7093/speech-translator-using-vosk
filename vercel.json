@@ -8,43 +8,17 @@
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
-    },
-    {
-      "src": "/audio/(.*)",
-      "dest": "/audio/$1"
-    },
-    {
-      "src": "/select_language",
-      "methods": ["POST"],
-      "dest": "app.py"
-    },
-    {
-      "src": "/get_transcription",
-      "methods": ["GET"],
-      "dest": "app.py"
-    },
-    {
-      "src": "/get_text_content",
-      "methods": ["GET"],
-      "dest": "app.py"
-    },
-    {
-      "src": "/get_audio_path",
-      "methods": ["POST"],
-      "dest": "app.py"
-    },
-    {
       "src": "/socket.io/(.*)",
-      "dest": "app.py"
+      "dest": "app.py",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+        "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
+      }
     },
     {
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ],
-  "env": {
-    "PYTHONUNBUFFERED": "1"
-  }
+  ]
 }
