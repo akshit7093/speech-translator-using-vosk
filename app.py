@@ -10,8 +10,17 @@ import json
 import os
 
 
+# app = Flask(__name__)
+# socketio = SocketIO(app)# Remove async_mode parameter  # Set async_mode to None for auto-detection
+from flask_cors import CORS
+
 app = Flask(__name__)
-socketio = SocketIO(app)# Remove async_mode parameter  # Set async_mode to None for auto-detection
+CORS(app)
+socketio = SocketIO(app, 
+    cors_allowed_origins="*",
+    async_mode='threading',
+    ping_timeout=60
+)
 
 # Load Vosk model
 model = Model("vosk-model-small-en-us-0.15")
