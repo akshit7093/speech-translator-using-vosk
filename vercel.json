@@ -1,24 +1,16 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/socket.io/(.*)",
-      "dest": "app.py",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
-        "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "app.py"
-    }
-  ]
+    "version":2,
+    "builds": [
+        {
+            "src":"./app.py",
+            "use": "@vercel/python",
+            "config":{"runtime":"python3.12"}
+        }
+    ],
+    "routes": [
+        {
+            "src":"/(.*)",
+            "dest":"/"
+        }
+    ]
 }
