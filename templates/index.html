@@ -5,74 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Speech Recognition</title>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --primary: #BB86FC;
+            --secondary: #03DAC6;
+            --background: #121212;
+            --surface: #1E1E1E;
+            --text: #FFFFFF;
+            --error: #CF6679;
+        }
+    
         body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: 'Arial', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
         }
-
+    
+        .container {
+            max-width: 800px;
+            padding: 2rem;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+    
         h1 {
-            margin-bottom: 20px;
-            animation: fadeIn 1s ease;
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            animation: slideDown 0.5s ease;
         }
-
-        label {
-            margin: 10px 0;
-            font-size: 18px;
-        }
-
+    
         select, button {
-            background-color: #1e1e1e;
-            color: #ffffff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            font-size: 16px;
+            background: var(--surface);
+            color: var(--text);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
             cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
+            transition: all 0.3s ease;
             margin: 10px;
-        }
-
-        select:hover, button:hover {
-            background-color: #3a3a3a;
-            transform: scale(1.05);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        p {
-            margin: 10px 0;
-            animation: fadeIn 1s ease;
-        }
-
-        audio {
-            margin-top: 20px;
-            border-radius: 5px;
-            background-color: #1e1e1e;
-            width: 100%;
-            max-width: 300px;
             outline: none;
         }
-
+    
+        select:hover, button:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(187, 134, 252, 0.3);
+        }
+    
+        button:active {
+            transform: translateY(0);
+        }
+    
+        #transcription, #textContent {
+            background: rgba(30, 30, 30, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid var(--secondary);
+            animation: slideIn 0.3s ease;
+        }
+    
+        audio {
+            width: 100%;
+            margin-top: 1rem;
+            border-radius: 8px;
+            background: var(--surface);
+        }
+    
+        audio::-webkit-media-controls-panel {
+            background: var(--surface);
+        }
+    
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display {
+            color: var(--text);
+        }
+    
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    
+        .gradient-text {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+    
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
     </style>
+    
+</head>
 </head>
 <body>
     <h1>Live Transcription</h1>
@@ -80,9 +143,6 @@
     <label for="language_id">Select Language:</label>
     <select id="language_id">
         <option value="Apatani">Apatani</option>
-        <!-- <option value="Bhutanese">Bhutanese</option>
-        <option value="French">French</option>
-        <option value="Hindi">Hindi</option> -->
         <option value="Monpa">Monpa</option>
     </select>
     <button id="start-button">Start Transcription</button>
@@ -93,18 +153,20 @@
 
     <script>
         const socket = io(window.location.origin, {
-            transports: ['websocket'],
-            upgrade: false
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            rememberUpgrade: true,
+            reconnection: true,
+            reconnectionAttempts: 5
         });
+
 
         const startButton = document.getElementById('start-button');
         const languageSelect = document.getElementById('language_id');
         const transcriptionDiv = document.getElementById('transcription');
         const textContentDiv = document.getElementById('textContent');
         const audioPlayer = document.getElementById('audioPlayer');
-
-        // Set buffer size (in samples)
-        const BUFFER_SIZE = 2048; // You can adjust this value
+        const BUFFER_SIZE = 2048;
 
         function selectLanguage(languageId) {
             fetch('/select_language', {
@@ -115,28 +177,23 @@
                 body: `language_id=${languageId}`
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    console.log('Language updated successfully');
-                } else {
-                    console.log('Error updating language');
-                }
-            })
+            .then(data => console.log(data.status === 'success' ? 'Language updated successfully' : 'Error updating language'))
             .catch(error => console.error('Error:', error));
         }
 
+        // Update the AudioProcessor worklet
         const audioWorkletCode = `
             class AudioProcessor extends AudioWorkletProcessor {
                 constructor() {
                     super();
-                    this.bufferSize = ${BUFFER_SIZE};
+                    this.bufferSize = 16000;  // Match backend chunk size
                     this.buffer = new Float32Array(this.bufferSize);
                     this.bufferIndex = 0;
                 }
 
                 process(inputs, outputs, parameters) {
                     const input = inputs[0];
-                    if (input.length > 0) {
+                    if (input && input[0]) {
                         const inputChannel = input[0];
                         for (let i = 0; i < inputChannel.length; i++) {
                             this.buffer[this.bufferIndex] = inputChannel[i];
@@ -145,6 +202,7 @@
                             if (this.bufferIndex >= this.bufferSize) {
                                 const int16Data = this.convertFloat32ToInt16(this.buffer);
                                 this.port.postMessage(int16Data.buffer, [int16Data.buffer]);
+                                this.buffer = new Float32Array(this.bufferSize);
                                 this.bufferIndex = 0;
                             }
                         }
@@ -161,29 +219,30 @@
                     return int16Buffer;
                 }
             }
-
             registerProcessor('audio-processor', AudioProcessor);
         `;
+
 
         startButton.addEventListener('click', async function() {
             const languageId = languageSelect.value;
             selectLanguage(languageId);
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { sampleRate: 16000, channelCount: 1 } 
+                });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ 
+                    sampleRate: 16000 
+                });
                 
                 const blob = new Blob([audioWorkletCode], { type: 'application/javascript' });
                 const workletUrl = URL.createObjectURL(blob);
-
                 await audioContext.audioWorklet.addModule(workletUrl);
                 
                 const source = audioContext.createMediaStreamSource(stream);
                 const audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor', {
                     outputChannelCount: [1],
-                    processorOptions: {
-                        bufferSize: BUFFER_SIZE
-                    }
+                    processorOptions: { bufferSize: BUFFER_SIZE }
                 });
                 
                 audioWorkletNode.port.onmessage = (event) => {
@@ -192,26 +251,25 @@
                 
                 source.connect(audioWorkletNode);
                 audioWorkletNode.connect(audioContext.destination);
-
+                
                 console.log('Audio processing started with buffer size:', BUFFER_SIZE);
             } catch (err) {
                 console.error('Error accessing microphone: ', err);
             }
         });
 
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
+        socket.on('connect', () => console.log('Connected to server'));
+        socket.on('disconnect', () => console.log('Disconnected from server'));
+        socket.on('connect_error', (error) => console.error('Connection error:', error));
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
+        socket.on('partial_transcription', function(data) {
+            transcriptionDiv.innerText = `Listening... ${data.transcription}`;
         });
 
         socket.on('transcription', function(data) {
             console.log('Received transcription:', data.transcription);
             transcriptionDiv.innerText = data.transcription;
 
-            // Fetch the text content for the matched sentence
             if (data.matched_sentence) {
                 fetch('/get_text_content')
                     .then(response => response.json())
@@ -220,7 +278,6 @@
                     })
                     .catch(error => console.error('Error fetching text content:', error));
 
-                // Fetch the audio path
                 fetch('/get_audio_path', {
                     method: 'POST',
                     headers: {
@@ -233,16 +290,10 @@
                     if (data.audioPath) {
                         audioPlayer.src = data.audioPath;
                         audioPlayer.play();
-                    } else {
-                        console.log('Audio not found for matched sentence');
                     }
                 })
                 .catch(error => console.error('Error fetching audio path:', error));
             }
-        });
-
-        socket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
         });
     </script>
 </body>
