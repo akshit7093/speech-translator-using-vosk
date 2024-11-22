@@ -1,17 +1,41 @@
-import webbrowser
-import threading
+import os
+import sys
+import subprocess
 import time
-from app import app, socketio
+import webbrowser
+import ctypes
 
-browser_opened = False
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
-def open_browser():
-    global browser_opened
-    if not browser_opened:
-        time.sleep(1.5)
-        webbrowser.open('http://127.0.0.1:5000')
-        browser_opened = True
+def main():
+    if not is_admin():
+        # Re-run the program with admin rights
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+        return
 
-if __name__ == '__main__':
-    threading.Thread(target=open_browser).start()
-    socketio.run(app, debug=False, allow_unsafe_werkzeug=True)
+    # Install requirements
+    print("Installing required packages...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+    
+    # Start Flask app in a separate process
+    flask_process = subprocess.Popen([sys.executable, "app.py"])
+    
+    # Wait for Flask to start
+    time.sleep(3)
+    
+    # Open browser
+    webbrowser.open('http://127.0.0.1:5000')
+    
+    try:
+        # Keep the script running
+        flask_process.wait()
+    except KeyboardInterrupt:
+        flask_process.terminate()
+        print("\nServer stopped")
+
+if __name__ == "__main__":
+    main()

@@ -19,7 +19,9 @@ CORS(app)
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
     async_mode='threading',
-    ping_timeout=60
+    ping_timeout=60,
+    ping_interval=25,
+    transports=['websocket', 'polling']
 )
 
 # Load Vosk model
