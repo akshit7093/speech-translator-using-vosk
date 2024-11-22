@@ -15,6 +15,7 @@ PyInstaller.__main__.run([
     '--add-data', 'vosk-model-small-en-us-0.15;vosk-model-small-en-us-0.15',
     '--hidden-import', 'flask_socketio',
     '--hidden-import', 'vosk',
+    '--hidden-import', 'numpy',
     '--hidden-import', 'numpy.core._methods',
     '--hidden-import', 'numpy.lib.format',
     '--name', 'SpeechTranslator',

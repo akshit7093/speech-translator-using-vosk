@@ -1,34 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
-import os
-import vosk
 
-vosk_path = os.path.dirname(vosk.__file__)
 
 a = Analysis(
     ['start.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        (vosk_path, 'vosk'),
-        ('templates', 'templates'),
-        ('static', 'static'),
-        ('audio', 'audio'),
-        ('sentences', 'sentences'),
-        ('vosk-model-small-en-us-0.15', 'vosk-model-small-en-us-0.15')
-    ],
-    hiddenimports=[
-        'flask_socketio',
-        'vosk',
-        'numpy.core._methods',
-        'numpy.lib.format'
-    ],
+    datas=[('C:\\Users\\Akshit\\anaconda3\\envs\\tf\\lib\\site-packages\\vosk', 'vosk'), ('templates', 'templates'), ('static', 'static'), ('audio', 'audio'), ('sentences', 'sentences'), ('vosk-model-small-en-us-0.15', 'vosk-model-small-en-us-0.15')],
+    hiddenimports=['flask_socketio', 'vosk', 'numpy', 'numpy.core._methods', 'numpy.lib.format'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['torch', 'tensorflow', 'scipy'],
+    excludes=[],
     noarchive=False,
+    optimize=0,
 )
-
 pyz = PYZ(a.pure)
 
 exe = EXE(
