@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": ["vosk-model-small-en-us-0.15/**"]
+      }
     }
   ],
   "routes": [
