@@ -68,7 +68,7 @@ After=network.target
 User=ec2-user
 WorkingDirectory=/home/ec2-user/lang_convert
 Environment="PATH=/home/ec2-user/lang_convert/venv/bin"
-ExecStart=/home/ec2-user/lang_convert/venv/bin/python app.py
+ExecStart=/home/ec2-user/lang_convert/venv/bin/gunicorn --workers 3 --bind unix:lang_convert.sock -m 007 --timeout 120 --log-level debug app:app
 Restart=always
 
 [Install]
