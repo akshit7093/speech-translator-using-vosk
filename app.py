@@ -8,27 +8,32 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, 
+
+# Corrected socketio initialization
+socketio = SocketIO(
     cors_allowed_origins="*",
-    async_mode='threading',  # Changed to threading for better compatibility
-    ping_timeout=120,  # Increased for AWS latency
-    ping_interval=30,  # Increased for AWS latency
+    async_mode='threading',  # Better compatibility
+    ping_timeout=120,        # Increased for AWS latency
+    ping_interval=30,        # Increased for AWS latency
     transports=['websocket', 'polling']
 )
+
+socketio.init_app(app)
 
 # Paths and configurations
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 audio_directory = os.path.join(BASE_DIR, "audio")
 sentences_directory = os.path.join(BASE_DIR, "sentences")
 
-# Load Vosk model - AWS allows loading the full model
+# Load Vosk model
 model_path = os.path.join(BASE_DIR, "vosk-model-small-en-us-0.15")
 if not os.path.exists(model_path):
     raise RuntimeError(f"Vosk model not found at {model_path}")
-    
+
 model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
 
+# Predefined sentences
 predefined_sentences = [
     "hello", "goodbye", "how are you", "good wishes",
     "i will drink water", "i will have food", "my name is",
@@ -49,59 +54,58 @@ text_content = ""
 audio_buffer = bytearray()
 
 # Initialize recognizer with predefined sentences
-recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' + 
+recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' +
             ','.join(f'"{word}"' for word in predefined_sentences) + ']')
 
 # Handle incoming audio stream
 @socketio.on('audio_stream')
 def handle_audio_stream(data):
     global audio_buffer, recognizer
-    
+
     try:
         chunk_size = 16000  # 1 second of audio at 16kHz
-        
+
         if isinstance(data, memoryview):
             audio_buffer.extend(data.tobytes())
         else:
             audio_buffer.extend(data)
-            
+
         while len(audio_buffer) >= chunk_size:
             audio_chunk = bytes(audio_buffer[:chunk_size])
             audio_buffer = audio_buffer[chunk_size:]
-            
+
             if recognizer.AcceptWaveform(audio_chunk):
                 result = json.loads(recognizer.Result())
                 process_recognition(result)
-                
+
     except Exception as e:
         print(f"Audio processing error: {e}")
         audio_buffer = bytearray()  # Reset buffer on error
 
 def process_recognition(result):
     transcription = result.get('text', '').lower()
-    
+
     # Match against predefined sentences
     matched_sentence = next(
-        (sentence for sentence in predefined_sentences 
+        (sentence for sentence in predefined_sentences
          if sentence in transcription),
         None
     )
-    
+
     # Emit transcription result
-    emit('transcription', {
+    socketio.emit('transcription', {
         'transcription': transcription,
         'matched_sentence': matched_sentence
     })
-    
+
     # Update global state if match found
     if matched_sentence:
         global latest_transcription, text_content
         latest_transcription = transcription
         text_content = display_text(matched_sentence)
-        
+
         # Log successful recognition
         print(f"Recognized: {matched_sentence}")
-
 
 def display_text(sentence):
     text_path = os.path.join(sentences_directory, sentence.replace(" ", "_"), f"{languages[selected_language]}.txt")
@@ -134,7 +138,7 @@ def get_audio_path():
     language = request.form['language']
     audio_filename = f"{sentence.replace(' ', '_')}/{languages[language]}.mp3"
     audio_path = os.path.join(audio_directory, audio_filename)
-    
+
     if os.path.exists(audio_path):
         return jsonify({'audioPath': url_for('serve_audio', filename=audio_filename)})
     return jsonify({'audioPath': None})
@@ -150,6 +154,5 @@ def health_check():
 
 # Main entry point for AWS
 if __name__ == '__main__':
-    # Modified to work better with Gunicorn
-    app.debug = False
+    # Use socketio.run() properly without setting app.debug manually
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)
