@@ -160,5 +160,6 @@ def serve_audio(filename):
 def health_check():
     return jsonify({"status": "ok", "environment": "Vercel" if IS_VERCEL else "Development"})
 
+
 if __name__ == '__main__':
     socketio.run(app, debug=True)

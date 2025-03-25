@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
-    async_mode='eventlet',  # Changed to eventlet for better Gunicorn compatibility
+    async_mode='threading',  # Changed to eventlet for better Gunicorn compatibility
     ping_timeout=120,  # Increased for AWS latency
     ping_interval=30,  # Increased for AWS latency
     transports=['websocket', 'polling']
