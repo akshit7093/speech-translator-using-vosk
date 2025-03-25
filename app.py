@@ -5,15 +5,18 @@ import numpy as np
 import json
 import os
 from flask_cors import CORS
+from engineio.async_drivers import eventlet
 
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
-    async_mode='threading',  # Changed to eventlet for better Gunicorn compatibility
+    async_mode='eventlet',  # Using eventlet for better production compatibility
     ping_timeout=120,  # Increased for AWS latency
     ping_interval=30,  # Increased for AWS latency
-    transports=['websocket', 'polling']
+    transports=['websocket', 'polling'],
+    logger=True,  # Enable logging for debugging
+    engineio_logger=True  # Enable Engine.IO logging
 )
 
 # Paths and configurations
@@ -150,5 +153,7 @@ def health_check():
 
 # Main entry point for AWS
 if __name__ == '__main__':
-    # Allow Werkzeug for development
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+    # Use eventlet WSGI server instead of Werkzeug
+    import eventlet
+    eventlet.monkey_patch()
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
