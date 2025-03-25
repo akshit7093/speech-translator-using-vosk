@@ -150,6 +150,5 @@ def health_check():
 
 # Main entry point for AWS
 if __name__ == '__main__':
-    # Modified to work better with Gunicorn
-    app.debug = False
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    # Use Flask's built-in server for development
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
