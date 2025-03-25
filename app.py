@@ -269,14 +269,5 @@ def verify_resources():
 
 
 if __name__ == '__main__':
-    # Production configuration
-    # Call this during startup
     verify_resources()
-    socketio.run(app,
-                host='0.0.0.0',
-                port=5000,
-                debug=False,
-                use_reloader=False,
-                threaded=True, 
-                allow_unsafe_werkzeug=True,
-                log_output=True)
+    socketio.run(app, host='0.0.0.0', port=5000)
