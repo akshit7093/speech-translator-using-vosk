@@ -150,5 +150,5 @@ def health_check():
 
 # Main entry point for AWS
 if __name__ == '__main__':
-    # Use Flask's built-in server for development
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    # Allow Werkzeug for development
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
