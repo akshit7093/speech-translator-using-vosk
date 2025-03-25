@@ -138,13 +138,31 @@ def get_audio_path():
     audio_filename = f"{sentence.replace(' ', '_')}/{languages[language]}.mp3"
     audio_path = os.path.join(audio_directory, audio_filename)
     
+    print(f"Requested audio path: {audio_path}")
     if os.path.exists(audio_path):
-        return jsonify({'audioPath': url_for('serve_audio', filename=audio_filename)})
+        audio_url = url_for('serve_audio', filename=audio_filename, _external=True)
+        print(f"Serving audio from: {audio_url}")
+        return jsonify({'audioPath': audio_url})
+    print(f"Audio file not found at: {audio_path}")
     return jsonify({'audioPath': None})
 
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
+    print(f"Serving audio file: {filename} from directory: {audio_directory}")
     return send_from_directory(audio_directory, filename)
+
+def display_text(sentence):
+    text_path = os.path.join(sentences_directory, sentence.replace(" ", "_"), f"{languages[selected_language]}.txt")
+    print(f"Looking for text file at: {text_path}")
+    if os.path.exists(text_path):
+        try:
+            with open(text_path, 'r', encoding='utf-8') as file:
+                return file.read()
+        except Exception as e:
+            print(f"Error reading text file: {e}")
+            return None
+    print(f"Text file not found at: {text_path}")
+    return None
 
 # Health check endpoint for AWS
 @app.route('/api/health')
