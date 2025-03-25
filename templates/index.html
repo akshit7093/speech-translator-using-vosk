@@ -152,23 +152,13 @@
     <audio id="audioPlayer" controls></audio>
 
     <script>
-        // const socket = io(window.location.origin, {
-        //     transports: ['websocket', 'polling'],
-        //     upgrade: true,
-        //     rememberUpgrade: true,
-        //     reconnection: true,
-        //     reconnectionAttempts: 5,
-        //     path: '/socket.io'
-        // });
-
         const socket = io(window.location.origin, {
-            transports: ['polling', 'websocket'],
+            transports: ['websocket', 'polling'],
             upgrade: true,
             rememberUpgrade: true,
             reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 1000,
-            timeout: 20000
+            reconnectionAttempts: 5,
+            path: '/socket.io'
         });
 
 
