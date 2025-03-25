@@ -80,8 +80,11 @@ WantedBy=multi-user.target
 # Reload systemd
 sudo systemctl daemon-reload
 
-# Start service
 sudo systemctl start lang_convert
+sudo systemctl restart lang_convert
+
+# Start service
+
 
 # Enable service to start on boot
 sudo systemctl enable lang_convert
