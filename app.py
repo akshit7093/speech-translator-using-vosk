@@ -191,6 +191,7 @@ def display_text(sentence):
 def index():
     return render_template('index.html', languages=languages)
 
+
 @app.route('/select_language', methods=['POST'])
 def select_language():
     global selected_language
@@ -251,8 +252,26 @@ def health_check():
         "connections": len(socketio.server.manager.get_pids())
     })
 
+def verify_resources():
+    required_phrases = ["hello", "goodbye", "i_will_have_food"]
+    required_languages = ["English", "Hindi", "Apatani"]
+    
+    for phrase in required_phrases:
+        for lang in required_languages:
+            text_path = f"sentences/{phrase}/{lang}.txt"
+            audio_path = f"audio/{phrase}/{lang}.mp3"
+            
+            if not os.path.exists(text_path):
+                logger.warning(f"Missing text file: {text_path}")
+            if not os.path.exists(audio_path):
+                logger.warning(f"Missing audio file: {audio_path}")
+
+
+
 if __name__ == '__main__':
     # Production configuration
+    # Call this during startup
+    verify_resources()
     socketio.run(app,
                 host='0.0.0.0',
                 port=5000,
