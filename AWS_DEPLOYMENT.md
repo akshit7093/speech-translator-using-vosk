@@ -96,11 +96,51 @@ sudo systemctl status lang_convert
 journalctl -u lang_convert -f
 ```
 
+## Step 8: Setting Up a Permanent URL
+
+### Option 1: Using Amazon Route 53 (Recommended)
+1. Register a domain through Route 53 or transfer existing domain
+2. Create a hosted zone in Route 53
+3. Create an A record pointing to your EC2 instance:
+   - Name: your domain (e.g., example.com)
+   - Type: A - IPv4 address
+   - Value: Your EC2 instance's public IP
+   - TTL: 300 seconds
+
+### Option 2: Using Custom Domain from Another Registrar
+1. Log in to your domain registrar
+2. Update nameservers or create DNS records:
+   - Type: A record
+   - Host: @ or subdomain
+   - Points to: Your EC2 instance's public IP
+   - TTL: 300 seconds
+
+### Setting up SSL/TLS Certificate
+1. Using AWS Certificate Manager (ACM):
+   ```bash
+   # Install NGINX
+   sudo yum install nginx -y
+   
+   # Request certificate in ACM console
+   # Configure NGINX with SSL
+   sudo nano /etc/nginx/conf.d/your-domain.conf
+   ```
+
+2. Using Let's Encrypt:
+   ```bash
+   # Install certbot
+   sudo yum install certbot python3-certbot-nginx -y
+   
+   # Obtain certificate
+   sudo certbot --nginx -d your-domain.com
+   ```
+
 ## Cost Optimization Tips
 1. Use t2.micro instance (free tier eligible)
 2. Monitor CPU credits and usage patterns
 3. Set up CloudWatch alarms for cost monitoring
 4. Consider using Elastic IP only if necessary (additional cost)
+5. Choose domain registration period wisely
 
 ## Security Recommendations
 1. Keep security groups restrictive
