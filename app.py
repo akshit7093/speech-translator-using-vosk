@@ -1,7 +1,3 @@
-# import eventlet
-# eventlet.monkey_patch()
-# eventlet.hubs.use_hub('selects') 
-
 from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
 from flask_socketio import SocketIO, emit
 from vosk import Model, KaldiRecognizer
@@ -15,8 +11,8 @@ CORS(app)
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
     async_mode='threading',
-    ping_timeout=60,
-    ping_interval=25,
+    ping_timeout=120,  # Increased for AWS latency
+    ping_interval=30,  # Increased for AWS latency
     transports=['websocket', 'polling']
 )
 
@@ -25,20 +21,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 audio_directory = os.path.join(BASE_DIR, "audio")
 sentences_directory = os.path.join(BASE_DIR, "sentences")
 
-# Check if running on Vercel (production) or locally
-IS_VERCEL = os.environ.get('VERCEL')
-
-# Load Vosk model - conditionally based on environment
-if not IS_VERCEL:
-    # Local development - load model from file
-    model = Model("vosk-model-small-en-us-0.15")
-    recognizer = KaldiRecognizer(model, 16000)
-else:
-    # On Vercel - we'll use a simplified approach
-    # Note: Full speech recognition may not work on Vercel due to model size limitations
-    # Consider using a cloud-based speech recognition service instead
-    model = None
-    recognizer = None
+# Load Vosk model - AWS allows loading the full model
+model_path = os.path.join(BASE_DIR, "vosk-model-small-en-us-0.15")
+if not os.path.exists(model_path):
+    raise RuntimeError(f"Vosk model not found at {model_path}")
+    
+model = Model(model_path)
+recognizer = KaldiRecognizer(model, 16000)
 
 predefined_sentences = [
     "hello", "goodbye", "how are you", "good wishes",
@@ -59,26 +48,16 @@ latest_transcription = ""
 text_content = ""
 audio_buffer = bytearray()
 
-# Update the recognizer initialization if not on Vercel
-if not IS_VERCEL and model:
-    recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' + 
-                ','.join(f'"{word}"' for word in predefined_sentences) + ']')
+# Initialize recognizer with predefined sentences
+recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' + 
+            ','.join(f'"{word}"' for word in predefined_sentences) + ']')
 
-# Modify the handle_audio_stream function
+# Handle incoming audio stream
 @socketio.on('audio_stream')
 def handle_audio_stream(data):
     global audio_buffer, recognizer
     
-    # Skip processing if on Vercel or model not loaded
-    if IS_VERCEL or not recognizer:
-        emit('transcription', {
-            'transcription': "Speech recognition not available in production",
-            'matched_sentence': None
-        })
-        return
-    
     try:
-        # Use larger chunk size for more stable processing
         chunk_size = 16000  # 1 second of audio at 16kHz
         
         if isinstance(data, memoryview):
@@ -164,11 +143,11 @@ def get_audio_path():
 def serve_audio(filename):
     return send_from_directory(audio_directory, filename)
 
-# Add a simple API endpoint for Vercel health check
+# Health check endpoint for AWS
 @app.route('/api/health')
 def health_check():
-    return jsonify({"status": "ok", "environment": "Vercel" if IS_VERCEL else "Development"})
+    return jsonify({"status": "ok", "environment": "AWS"})
 
-# Modified entry point for Vercel
+# Main entry point for AWS
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000)
