@@ -149,7 +149,11 @@ def get_audio_path():
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
     print(f"Serving audio file: {filename} from directory: {audio_directory}")
-    return send_from_directory(audio_directory, filename)
+    response = send_from_directory(audio_directory, filename, mimetype='audio/mpeg')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 def display_text(sentence):
     text_path = os.path.join(sentences_directory, sentence.replace(" ", "_"), f"{languages[selected_language]}.txt")
