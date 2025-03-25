@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
-    async_mode='threading',
+    async_mode='eventlet',  # Changed to eventlet for better Gunicorn compatibility
     ping_timeout=120,  # Increased for AWS latency
     ping_interval=30,  # Increased for AWS latency
     transports=['websocket', 'polling']
@@ -150,4 +150,6 @@ def health_check():
 
 # Main entry point for AWS
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+    # Modified to work better with Gunicorn
+    app.debug = False
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
