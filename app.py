@@ -57,6 +57,7 @@ recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' +
 def handle_audio_stream(data):
     global audio_buffer, recognizer
     
+    
     try:
         chunk_size = 16000  # 1 second of audio at 16kHz
         
