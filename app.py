@@ -8,10 +8,6 @@ from vosk import Model, KaldiRecognizer
 import numpy as np
 import json
 import os
-
-
-# app = Flask(__name__)
-# socketio = SocketIO(app)# Remove async_mode parameter  # Set async_mode to None for auto-detection
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -24,14 +20,25 @@ socketio = SocketIO(app,
     transports=['websocket', 'polling']
 )
 
-# Load Vosk model
-model = Model("vosk-model-small-en-us-0.15")
-recognizer = KaldiRecognizer(model, 16000)
-
 # Paths and configurations
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 audio_directory = os.path.join(BASE_DIR, "audio")
 sentences_directory = os.path.join(BASE_DIR, "sentences")
+
+# Check if running on Vercel (production) or locally
+IS_VERCEL = os.environ.get('VERCEL')
+
+# Load Vosk model - conditionally based on environment
+if not IS_VERCEL:
+    # Local development - load model from file
+    model = Model("vosk-model-small-en-us-0.15")
+    recognizer = KaldiRecognizer(model, 16000)
+else:
+    # On Vercel - we'll use a simplified approach
+    # Note: Full speech recognition may not work on Vercel due to model size limitations
+    # Consider using a cloud-based speech recognition service instead
+    model = None
+    recognizer = None
 
 predefined_sentences = [
     "hello", "goodbye", "how are you", "good wishes",
@@ -52,14 +59,23 @@ latest_transcription = ""
 text_content = ""
 audio_buffer = bytearray()
 
-# Update the recognizer initialization
-recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' + 
-             ','.join(f'"{word}"' for word in predefined_sentences) + ']')
+# Update the recognizer initialization if not on Vercel
+if not IS_VERCEL and model:
+    recognizer = KaldiRecognizer(model, 16000, '["[unk]", ' + 
+                ','.join(f'"{word}"' for word in predefined_sentences) + ']')
 
 # Modify the handle_audio_stream function
 @socketio.on('audio_stream')
 def handle_audio_stream(data):
     global audio_buffer, recognizer
+    
+    # Skip processing if on Vercel or model not loaded
+    if IS_VERCEL or not recognizer:
+        emit('transcription', {
+            'transcription': "Speech recognition not available in production",
+            'matched_sentence': None
+        })
+        return
     
     try:
         # Use larger chunk size for more stable processing
@@ -148,5 +164,11 @@ def get_audio_path():
 def serve_audio(filename):
     return send_from_directory(audio_directory, filename)
 
+# Add a simple API endpoint for Vercel health check
+@app.route('/api/health')
+def health_check():
+    return jsonify({"status": "ok", "environment": "Vercel" if IS_VERCEL else "Development"})
+
+# Modified entry point for Vercel
 if __name__ == '__main__':
     socketio.run(app, debug=True)
