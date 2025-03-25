@@ -171,4 +171,4 @@ def health_check():
 
 # Modified entry point for Vercel
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
