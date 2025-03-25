@@ -155,5 +155,4 @@ def health_check():
 
 # Main entry point for AWS
 if __name__ == '__main__':
-    # Use socketio.run() properly without setting app.debug manually
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, threaded=True, allow_unsafe_werkzeug=True)
