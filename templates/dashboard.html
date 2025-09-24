@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Speech Translation App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #BB86FC;
+            --secondary: #03DAC6;
+            --background: #121212;
+            --surface: #1E1E1E;
+            --text: #FFFFFF;
+            --error: #CF6679;
+            --success: #00C853;
+            --reference: #FF9800;  /* Orange for reference language */
+        }
+    
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+    
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+    
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    
+        .admin-header h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+        }
+    
+        .admin-actions {
+            display: flex;
+            gap: 1rem;
+        }
+    
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-family: 'Poppins', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+    
+        .btn-primary {
+            background: var(--primary);
+            color: var(--background);
+        }
+    
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(187, 134, 252, 0.3);
+        }
+    
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 2px solid var(--secondary);
+        }
+    
+        .btn-secondary:hover {
+            background: var(--secondary);
+            color: var(--background);
+        }
+    
+        .btn-danger {
+            background: var(--error);
+            color: var(--background);
+        }
+    
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(207, 102, 121, 0.3);
+        }
+    
+        .btn-reference {
+            background: var(--reference);
+            color: var(--background);
+        }
+    
+        .btn-reference:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+        }
+    
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+    
+        .messages {
+            margin-bottom: 1.5rem;
+        }
+    
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    
+        .message.success {
+            background-color: rgba(0, 200, 83, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(0, 200, 83, 0.3);
+        }
+    
+        .message.error {
+            background-color: rgba(207, 102, 121, 0.2);
+            color: var(--error);
+            border: 1px solid rgba(207, 102, 121, 0.3);
+        }
+    
+        .admin-panel {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+    
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: rgba(30, 30, 30, 0.5);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    
+        .panel-header h2 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin: 0;
+        }
+    
+        .panel-content {
+            padding: 1.5rem;
+        }
+    
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+    
+        .admin-table th, .admin-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    
+        .admin-table th {
+            background: rgba(30, 30, 30, 0.7);
+            font-weight: 600;
+            color: var(--secondary);
+        }
+    
+        .admin-table tr:hover {
+            background: rgba(187, 134, 252, 0.1);
+        }
+    
+        .translation-group {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    
+        .translation-group h3 {
+            color: var(--secondary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .reference-language h3 {
+            color: var(--reference);
+        }
+    
+        textarea {
+            width: 100%;
+            background: var(--surface);
+            color: var(--text);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+            min-height: 80px;
+            resize: vertical;
+        }
+    
+        textarea:focus {
+            border-color: var(--secondary);
+        }
+    
+        .audio-controls {
+            margin-top: 0.5rem;
+        }
+    
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+    
+        .modal-content {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+    
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+    
+        .close-modal:hover {
+            color: var(--primary);
+        }
+    
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+    
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+    
+        input[type="text"] {
+            width: 100%;
+            background: var(--surface);
+            color: var(--text);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+    
+        input[type="text"]:focus {
+            border-color: var(--secondary);
+        }
+    
+        small {
+            color: #aaa;
+            font-size: 0.85rem;
+            display: block;
+            margin-top: 4px;
+        }
+    
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .reference-note {
+            color: var(--reference);
+            font-style: italic;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Speech Translation App - Admin Dashboard</h1>
+            <div class="admin-actions">
+                <a href="/" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" />
+                    </svg>
+                    View App
+                </a>
+                <a href="{{ url_for('admin.logout') }}" class="btn btn-danger">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M14,11V13H3V11H14M18,8V10H16V8H18M19,11C19,11.34 18.93,11.66 18.82,11.97L21.56,14.71C21.95,14.32 22.25,13.85 22.44,13.33L19.7,10.6C19.51,11.12 19.21,11.6 18.82,12.03C18.93,12.34 19,12.66 19,13A3,3 0 0,1 16,16A3,3 0 0,1 13,13C13,12.66 13.07,12.34 13.18,12.03L10.44,9.29C10.05,9.68 9.75,10.15 9.56,10.67L12.3,13.4C12.49,12.88 12.79,12.4 13.18,11.97C13.07,11.66 13,11.34 13,11A3,3 0 0,1 16,8A3,3 0 0,1 19,11M11,19H6A2,2 0 0,1 4,17V7A2,2 0 0,1 6,5H11V3H6A4,4 0 0,0 2,7V17A4,4 0 0,0 6,21H11V19M20,15.5C20,16.88 18.88,18 17.5,18C16.12,18 15,16.88 15,15.5C15,14.12 16.12,13 17.5,13C18.88,13 20,14.12 20,15.5Z" />
+                    </svg>
+                    Logout
+                </a>
+            </div>
+        </header>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="messages">
+                    {% for category, message in messages %}
+                        <div class="message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <div class="admin-content">
+            <div class="admin-panel">
+                <div class="panel-header">
+                    <h2>Languages Management</h2>
+                    <button class="btn btn-primary" id="add-language-btn">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                        </svg>
+                        Add Language
+                    </button>
+                </div>
+                
+                <div class="panel-content">
+                    <table class="admin-table" id="languages-table">
+                        <thead>
+                            <tr>
+                                <th>Language Code</th>
+                                <th>Language Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Languages will be loaded here via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="admin-panel">
+                <div class="panel-header">
+                    <h2>Sentences Management</h2>
+                    <button class="btn btn-primary" id="add-sentence-btn">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                        </svg>
+                        Add Sentence
+                    </button>
+                </div>
+                
+                <div class="panel-content">
+                    <table class="admin-table" id="sentences-table">
+                        <thead>
+                            <tr>
+                                <th>Sentence ID</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Sentences will be loaded here via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="admin-panel" id="sentence-details-panel" style="display: none;">
+                <div class="panel-header">
+                    <h2 id="sentence-details-title">Sentence Details</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-secondary" id="back-to-sentences">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <path fill="currentColor" d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" />
+                            </svg>
+                            Back to Sentences
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="panel-content">
+                    <form id="sentence-form">
+                        <input type="hidden" id="sentence-id" name="sentence_id">
+                        
+                        <div id="sentence-translations">
+                            <!-- Translations will be loaded here -->
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div class="modal" id="add-language-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" data-modal="add-language-modal">&times;</span>
+            <h2>Add New Language</h2>
+            <form id="add-language-form">
+                <div class="form-group">
+                    <label for="language_code">Language Code</label>
+                    <input type="text" id="language_code" name="language_code" required>
+                    <small>Example: 'fr' for French, 'hi' for Hindi</small>
+                </div>
+                <div class="form-group">
+                    <label for="language_name">Language Name</label>
+                    <input type="text" id="language_name" name="language_name" required>
+                    <small>Example: 'French', 'Hindi'</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-modal" data-modal="add-language-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Language</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal" id="add-sentence-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" data-modal="add-sentence-modal">&times;</span>
+            <h2>Add New Sentence</h2>
+            <form id="add-sentence-form">
+                <div class="form-group">
+                    <label for="sentence_id">Sentence ID</label>
+                    <input type="text" id="sentence_id" name="sentence_id" required>
+                    <small>Use underscores for spaces, e.g., 'hello_world'</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-modal" data-modal="add-sentence-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Sentence</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Reference language configuration
+        const REFERENCE_LANGUAGE = "{{ reference_language }}";
+        const REFERENCE_LANGUAGE_NAME = "English";
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data
+            loadLanguages();
+            loadSentences();
+            
+            // Modal functionality
+            document.querySelectorAll('.close-modal').forEach(button => {
+                button.addEventListener('click', function() {
+                    const modalId = this.getAttribute('data-modal');
+                    document.getElementById(modalId).style.display = 'none';
+                });
+            });
+            
+            // Click outside modal to close
+            window.addEventListener('click', function(event) {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Add Language button
+            document.getElementById('add-language-btn').addEventListener('click', function() {
+                document.getElementById('add-language-modal').style.display = 'block';
+            });
+            
+            // Add Sentence button
+            document.getElementById('add-sentence-btn').addEventListener('click', function() {
+                document.getElementById('add-sentence-modal').style.display = 'block';
+            });
+            
+            // Back to Sentences button
+            document.getElementById('back-to-sentences').addEventListener('click', function() {
+                document.getElementById('sentence-details-panel').style.display = 'none';
+            });
+            
+            // Add Language form submit
+            document.getElementById('add-language-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                
+                fetch('/admin/api/languages', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Language added successfully!`);
+                        document.getElementById('add-language-modal').style.display = 'none';
+                        this.reset();
+                        loadLanguages();
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the language.');
+                });
+            });
+            
+            // Add Sentence form submit
+            document.getElementById('add-sentence-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                
+                fetch('/admin/api/sentences', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Sentence added successfully!`);
+                        document.getElementById('add-sentence-modal').style.display = 'none';
+                        this.reset();
+                        loadSentences();
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the sentence.');
+                });
+            });
+        });
+        
+        // Load Languages
+        function loadLanguages() {
+            fetch('/admin/api/languages')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#languages-table tbody');
+                    tableBody.innerHTML = '';
+                    
+                    if (!data.languages || Object.keys(data.languages).length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="3">No languages found. Add one to get started.</td></tr>';
+                        return;
+                    }
+                    
+                    Object.entries(data.languages).forEach(([code, name]) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${code}</td>
+                            <td>${name}</td>
+                            <td>
+                                ${code === REFERENCE_LANGUAGE ? 
+                                    `<span class="reference-note">Reference language (cannot be deleted)</span>` :
+                                    `<button class="btn btn-danger btn-sm delete-language" data-code="${code}">Delete</button>`
+                                }
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // Add event listeners to delete buttons
+                    document.querySelectorAll('.delete-language').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const languageCode = this.getAttribute('data-code');
+                            deleteLanguage(languageCode);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading languages:', error);
+                    document.querySelector('#languages-table tbody').innerHTML = 
+                        '<tr><td colspan="3">Error loading languages. Please try again.</td></tr>';
+                });
+        }
+        
+        // Delete Language
+        function deleteLanguage(languageCode) {
+            if (languageCode === REFERENCE_LANGUAGE) {
+                alert(`Cannot delete the reference language (${REFERENCE_LANGUAGE_NAME})`);
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete the language "${languageCode}"? This will remove all translations for this language.`)) {
+                return;
+            }
+            
+            fetch(`/admin/api/languages/${languageCode}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Language deleted successfully!');
+                    loadLanguages();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the language.');
+            });
+        }
+        
+        // Load Sentences
+        function loadSentences() {
+            fetch('/admin/api/sentences')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#sentences-table tbody');
+                    tableBody.innerHTML = '';
+                    
+                    if (!data.sentences || data.sentences.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="2">No sentences found. Add one to get started.</td></tr>';
+                        return;
+                    }
+                    
+                    data.sentences.forEach(sentenceId => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${sentenceId}</td>
+                            <td>
+                                <button class="btn btn-primary btn-sm edit-sentence" data-id="${sentenceId}">Edit</button>
+                                <button class="btn btn-danger btn-sm delete-sentence" data-id="${sentenceId}">Delete</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // Add event listeners to edit buttons
+                    document.querySelectorAll('.edit-sentence').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const sentenceId = this.getAttribute('data-id');
+                            loadSentenceDetails(sentenceId);
+                        });
+                    });
+                    
+                    // Add event listeners to delete buttons
+                    document.querySelectorAll('.delete-sentence').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const sentenceId = this.getAttribute('data-id');
+                            deleteSentence(sentenceId);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading sentences:', error);
+                    document.querySelector('#sentences-table tbody').innerHTML = 
+                        '<tr><td colspan="2">Error loading sentences. Please try again.</td></tr>';
+                });
+        }
+        
+        // Load Sentence Details
+        function loadSentenceDetails(sentenceId) {
+            fetch(`/admin/api/sentence/${sentenceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(`Error: ${data.error}`);
+                        return;
+                    }
+                    
+                    // Show sentence details panel
+                    document.getElementById('sentence-details-panel').style.display = 'block';
+                    document.getElementById('sentence-details-title').textContent = `Editing: ${data.id}`;
+                    document.getElementById('sentence-id').value = data.id;
+                    
+                    // Generate translation fields
+                    const translationsContainer = document.getElementById('sentence-translations');
+                    translationsContainer.innerHTML = '';
+                    
+                    Object.entries(data.translations).forEach(([langCode, translation]) => {
+                        const translationDiv = document.createElement('div');
+                        translationDiv.className = langCode === REFERENCE_LANGUAGE ? 'translation-group reference-language' : 'translation-group';
+                        
+                        translationDiv.innerHTML = `
+                            <h3>${langCode}${langCode === REFERENCE_LANGUAGE ? ' (Reference)' : ''}</h3>
+                            <div class="form-group">
+                                <label>Text</label>
+                                <textarea name="text_${langCode}" class="translation-text" rows="3">${translation.text}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Audio</label>
+                                <div class="audio-controls">
+                                    ${translation.has_audio ? 
+                                        `<audio controls src="/audio/${data.id}/${langCode}"></audio><br>` : 
+                                        '<span>No audio file</span><br>'
+                                    }
+                                    <input type="file" name="audio_${langCode}" accept="audio/*">
+                                </div>
+                                ${langCode === REFERENCE_LANGUAGE ? 
+                                    '<div class="reference-note">This is the reference language. All sentences should have this translation.</div>' : 
+                                    ''
+                                }
+                            </div>
+                        `;
+                        
+                        translationsContainer.appendChild(translationDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading sentence details:', error);
+                    alert('An error occurred while loading sentence details.');
+                });
+        }
+        
+        // Delete Sentence
+        function deleteSentence(sentenceId) {
+            if (!confirm(`Are you sure you want to delete the sentence "${sentenceId}"? This cannot be undone.`)) {
+                return;
+            }
+            
+            fetch(`/admin/api/sentences/${sentenceId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Sentence deleted successfully!');
+                    loadSentences();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the sentence.');
+            });
+        }
+        
+        // Save Sentence form submit
+        document.getElementById('sentence-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const sentenceId = document.getElementById('sentence-id').value;
+            
+            fetch(`/admin/api/sentences/${sentenceId}`, {
+                method: 'PUT',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Sentence updated successfully!');
+                    loadSentences();
+                    document.getElementById('sentence-details-panel').style.display = 'none';
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the sentence.');
+            });
+        });
+    </script>
+</body>
+</html>

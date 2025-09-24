@@ -2,207 +2,626 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Audio Language Selector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Translation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --primary: #BB86FC;
+            --secondary: #03DAC6;
+            --background: #121212;
+            --surface: #1E1E1E;
+            --text: #FFFFFF;
+            --error: #CF6679;
+            --reference: #FF9800;  /* Orange for reference language */
+        }
+    
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            margin: 20px;
-            padding: 20px;
+            background-color: var(--background);
+            color: var(--text);
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
         }
-        h1, h2 {
+    
+        .container {
+            max-width: 800px;
+            padding: 2rem;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+    
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
             text-align: center;
-            color: #333;
+            animation: slideDown 0.5s ease;
         }
-        #device-form {
-            max-width: 400px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        
+        .subtitle {
+            color: var(--secondary);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            opacity: 0.8;
         }
+
+        .selection-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+        
+        .selection-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
         label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 10px;
+            margin-bottom: 0.5rem;
+            color: var(--secondary);
+            font-weight: 500;
         }
-        select, button {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1em;
-        }
-        button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
+
+        select {
+            background: var(--surface);
+            color: var(--text);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
             cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
         }
-        button:hover {
-            background-color: #0056b3;
+    
+        select:hover {
+            background: var(--primary);
+            color: var(--background);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(187, 134, 252, 0.3);
         }
-        #transcription {
-            margin-top: 20px;
-            font-size: 1.2em;
-            background-color: #fff;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
+        
+        select:focus {
+            border-color: var(--secondary);
+        }
+    
+        .content-display {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .content-section {
+            background: rgba(30, 30, 30, 0.5);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .reference-section {
+            background: rgba(30, 30, 30, 0.5);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--reference);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .content-section h2 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+        
+        .reference-section h2 {
+            color: var(--reference);
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+        
         .text-content {
-            margin-top: 20px;
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            min-height: 80px;
+            font-size: 1.4rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            white-space: pre-wrap;
+        }
+        
+        .audio-controls {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .play-btn {
+            background: var(--primary);
+            color: var(--background);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .play-reference {
+            background: var(--reference);
+        }
+        
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(187, 134, 252, 0.4);
+        }
+        
+        .play-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .play-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .admin-link {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .admin-link a {
+            color: var(--secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .admin-link a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-style: italic;
+            color: var(--secondary);
+            opacity: 0.7;
         }
     </style>
 </head>
 <body>
-    <h1>Audio Language Selector</h1>
-    <div id="device-form">
-        <label for="device_index">Select Input Device:</label>
-        <select name="device_index" id="device_index">
-            {% for device in devices %}
-                <option value="{{ loop.index0 }}">{{ device }}</option>
-            {% endfor %}
-        </select>
-        <br><br>
-        <label for="language_id">Select Language:</label>
-        <select name="language_id" id="language_id">
-            {% for id, name in languages.items() %}
-                <option value="{{ id }}">{{ name }}</option>
-            {% endfor %}
-        </select>
-        <br><br>
-        <button type="button" id="start-button">Start</button>
+    <div class="container">
+        <h1>Speech Translation</h1>
+        <p class="subtitle">Select languages and sentences for translation</p>
+        
+        <div class="selection-panel">
+            <div class="selection-group">
+                <label for="initial-language">Source Language:</label>
+                <select id="initial-language">
+                    <option value="">Select a language</option>
+                </select>
+            </div>
+            
+            <div class="selection-group">
+                <label for="sentence">Sentence:</label>
+                <select id="sentence" disabled>
+                    <option value="">Select a sentence</option>
+                </select>
+            </div>
+            
+            <div class="selection-group">
+                <label for="target-language">Target Language:</label>
+                <select id="target-language" disabled>
+                    <option value="">Select a language</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="content-display">
+            <div class="content-section">
+                <h2 id="initial-language-name">Source Text</h2>
+                <div id="initial-text" class="text-content">Select a source language and sentence</div>
+                <div class="audio-controls">
+                    <button id="play-initial" class="play-btn" disabled>
+                        <svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+                        </svg>
+                        Play Source Audio
+                    </button>
+                </div>
+            </div>
+            
+            <div class="reference-section">
+                <h2 id="reference-language-name">English Translation</h2>
+                <div id="reference-text" class="text-content">English translation will appear here</div>
+                <div class="audio-controls">
+                    <button id="play-reference" class="play-btn play-reference" disabled>
+                        <svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+                        </svg>
+                        Play English Audio
+                    </button>
+                </div>
+            </div>
+            
+            <div class="content-section">
+                <h2 id="target-language-name">Target Text</h2>
+                <div id="target-text" class="text-content">Select a target language</div>
+                <div class="audio-controls">
+                    <button id="play-target" class="play-btn" disabled>
+                        <svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+                        </svg>
+                        Play Target Audio
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="admin-link">
+            <a href="/admin">Admin Panel</a>
+        </div>
+        <div class="status" id="connection-status">Application ready</div>
     </div>
-    
-    <h2>Latest Transcription:</h2>
-    <div id="transcription">No transcription yet</div>
-    
-    <div id="text-content" class="text-content"></div>
-    <audio id="audioPlayer" controls></audio>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const startButton = document.getElementById('start-button');
-            const deviceSelect = document.getElementById('device_index');
-            const languageSelect = document.getElementById('language_id');
-            const transcriptionDiv = document.getElementById('transcription');
-            const textContentDiv = document.getElementById('text-content');
-            const audioPlayer = document.getElementById('audioPlayer');
-
-            let transcriptionInterval;
-            let lastPlayedSentence = null;
-
-            startButton.addEventListener('click', function() {
-                const deviceIndex = deviceSelect.value;
-                const languageId = languageSelect.value;
-
-                // Reset only necessary elements
-                transcriptionDiv.innerText = 'No transcription yet';
-                textContentDiv.innerHTML = '';
-                audioPlayer.pause();
-                audioPlayer.src = '';
-                lastPlayedSentence = null;
-
-                fetch('/select_device', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `device_index=${deviceIndex}&language_id=${languageId}`
+        // DOM Elements
+        const initialLanguageSelect = document.getElementById('initial-language');
+        const sentenceSelect = document.getElementById('sentence');
+        const targetLanguageSelect = document.getElementById('target-language');
+        const initialText = document.getElementById('initial-text');
+        const referenceText = document.getElementById('reference-text');
+        const targetText = document.getElementById('target-text');
+        const playInitialBtn = document.getElementById('play-initial');
+        const playReferenceBtn = document.getElementById('play-reference');
+        const playTargetBtn = document.getElementById('play-target');
+        const initialLanguageName = document.getElementById('initial-language-name');
+        const referenceLanguageName = document.getElementById('reference-language-name');
+        const targetLanguageName = document.getElementById('target-language-name');
+        const connectionStatus = document.getElementById('connection-status');
+        
+        // Configuration - These will be populated from the server
+        let REFERENCE_LANGUAGE = "{{ reference_language }}";
+        let REFERENCE_LANGUAGE_NAME = "{{ reference_language_name }}";
+        let allLanguages = {}; // This will store the full language map
+        
+        // Audio elements
+        let initialAudio = null;
+        let referenceAudio = null;
+        let targetAudio = null;
+        
+        // Load languages
+        function loadLanguages() {
+            connectionStatus.textContent = 'Loading languages...';
+            
+            fetch('/api/languages')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
                 })
-                .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        console.log('Device and language updated successfully');
-                        startTranscriptionPolling();
+                    console.log('API/languages response:', data);
+                    
+                    // Store the full language map
+                    allLanguages = data.languages || {};
+                    
+                    // Clear existing options
+                    initialLanguageSelect.innerHTML = '<option value="">Select a language</option>';
+                    targetLanguageSelect.innerHTML = '<option value="">Select a language</option>';
+                    
+                    // Add languages to both dropdowns
+                    Object.keys(allLanguages).forEach(langCode => {
+                        const langName = allLanguages[langCode];
+                        
+                        // For display, use the language name (value), not the code (key)
+                        const initialOption = new Option(langName, langCode);
+                        const targetOption = new Option(langName, langCode);
+                        
+                        initialLanguageSelect.add(initialOption);
+                        targetLanguageSelect.add(targetOption);
+                    });
+                    
+                    // Update reference language name if it exists in our languages
+                    if (allLanguages[REFERENCE_LANGUAGE]) {
+                        REFERENCE_LANGUAGE_NAME = allLanguages[REFERENCE_LANGUAGE];
+                        referenceLanguageName.textContent = `${REFERENCE_LANGUAGE_NAME} Translation`;
+                    }
+                    
+                    connectionStatus.textContent = 'Languages loaded successfully';
+                    console.log('Languages loaded:', allLanguages);
+                })
+                .catch(error => {
+                    console.error('Error loading languages:', error);
+                    connectionStatus.textContent = `Error loading languages: ${error.message}`;
+                    connectionStatus.style.color = 'var(--error)';
+                });
+        }
+        
+        // Load sentences for selected language
+        function loadSentences(language) {
+            if (!language) return;
+            
+            // Get the display name for the status message
+            const langName = allLanguages[language] || language;
+            connectionStatus.textContent = `Loading sentences for ${langName}...`;
+            
+            fetch(`/api/sentences/${language}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(`API/sentences/${language} response:`, data);
+                    
+                    // Clear existing options
+                    sentenceSelect.innerHTML = '<option value="">Select a sentence</option>';
+                    sentenceSelect.disabled = false;
+                    
+                    // Add sentences
+                    if (data.sentences && data.sentences.length > 0) {
+                        data.sentences.forEach(sentence => {
+                            const option = new Option(sentence.text, sentence.id);
+                            sentenceSelect.add(option);
+                        });
+                        connectionStatus.textContent = `Loaded ${data.sentences.length} sentences for ${allLanguages[language] || language}`;
                     } else {
-                        console.log('Error updating device and language');
+                        connectionStatus.textContent = 'No sentences available for this language';
+                        connectionStatus.style.color = 'var(--error)';
                     }
                 })
-                .catch(error => console.error('Error:', error));
-            });
-
-            async function fetchAudio(sentence, language) {
-                const response = await fetch('/get_audio_path', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `sentence=${sentence}&language=${language}`
+                .catch(error => {
+                    console.error(`Error loading sentences for ${language}:`, error);
+                    connectionStatus.textContent = `Error loading sentences: ${error.message}`;
+                    connectionStatus.style.color = 'var(--error)';
                 });
-                const data = await response.json();
-                if (data.audioPath) {
-                    console.log(`Playing audio from: ${data.audioPath}`);
-                    audioPlayer.src = data.audioPath;
-                    audioPlayer.play();
-                } else {
-                    console.log('Audio file not found');
-                }
-            }
-            mediaRecorder.ondataavailable = event => {
-                audioChunks.push(event.data);
-                if (mediaRecorder.state === "recording") {
-                    const audioBlob = new Blob(audioChunks, { type: mimeType });
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        const base64data = reader.result.split(',')[1]; 
-                        // Emit the base64 encoded string directly
-                        socket.emit('audio', base64data); 
-                    };
-                    reader.readAsDataURL(audioBlob);
-                    audioChunks = [];
-                }
-            };
-            async function fetchTranscription() {
-                const response = await fetch('/get_transcription');
-                const data = await response.json();
-                transcriptionDiv.innerText = data.transcription;
-
-                const predefinedSentences = [
-                    "hello", "goodbye", "how are you", "good wishes",
-                    "i will drink water", "i will have food", "my name is",
-                    "thank you", "will you drink water", "will you have food"
-                ];
-
-                for (const sentence of predefinedSentences) {
-                    if (data.transcription.toLowerCase().includes(sentence) && sentence !== lastPlayedSentence) {
-                        fetchAudio(sentence, languageSelect.value);
-                        lastPlayedSentence = sentence;
-                        break;
+        }
+        
+        // Load content for selected sentence and language
+        function loadContent(sentence, language, isInitial = true, isReference = false) {
+            if (!sentence || !language) return;
+            
+            // Get the display name for the status message
+            const langName = allLanguages[language] || language;
+            let sectionName = isInitial ? 'Source' : 
+                             (isReference ? 'Reference' : 'Target');
+            
+            const statusMsg = `Loading ${sectionName} content for "${sentence}"...`;
+            connectionStatus.textContent = statusMsg;
+            console.log(statusMsg);
+            
+            fetch(`/api/content/${sentence}/${language}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                }
-
-                if (!predefinedSentences.some(sentence => data.transcription.toLowerCase().includes(sentence))) {
-                    lastPlayedSentence = null;
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(`API/content/${sentence}/${language} response:`, data);
+                    
+                    // Update text content
+                    if (isInitial) {
+                        initialText.textContent = data.text || 'No text available';
+                        
+                        // Use the language name for display
+                        const displayName = allLanguages[language] || language;
+                        initialLanguageName.textContent = `${displayName} Text`;
+                        
+                        // Setup audio
+                        if (data.audio_url) {
+                            initialAudio = new Audio(data.audio_url);
+                            playInitialBtn.disabled = false;
+                        } else {
+                            playInitialBtn.disabled = true;
+                        }
+                    } 
+                    else if (isReference) {
+                        referenceText.textContent = data.text || 'No English translation available';
+                        
+                        // Setup audio
+                        if (data.audio_url) {
+                            referenceAudio = new Audio(data.audio_url);
+                            playReferenceBtn.disabled = false;
+                        } else {
+                            playReferenceBtn.disabled = true;
+                        }
+                    }
+                    else {
+                        targetText.textContent = data.text || 'No translation available';
+                        
+                        // Use the language name for display
+                        const displayName = allLanguages[language] || language;
+                        targetLanguageName.textContent = `${displayName} Translation`;
+                        
+                        // Setup audio
+                        if (data.audio_url) {
+                            targetAudio = new Audio(data.audio_url);
+                            playTargetBtn.disabled = false;
+                        } else {
+                            playTargetBtn.disabled = true;
+                        }
+                    }
+                    
+                    connectionStatus.textContent = 'Content loaded successfully';
+                })
+                .catch(error => {
+                    console.error(`Error loading content for ${sentence}/${language}:`, error);
+                    connectionStatus.textContent = `Error loading content: ${error.message}`;
+                    connectionStatus.style.color = 'var(--error)';
+                    
+                    if (isInitial) {
+                        initialText.textContent = 'Error loading text';
+                        playInitialBtn.disabled = true;
+                    } 
+                    else if (isReference) {
+                        referenceText.textContent = 'No English translation available';
+                        playReferenceBtn.disabled = true;
+                    }
+                    else {
+                        targetText.textContent = 'Error loading translation';
+                        playTargetBtn.disabled = true;
+                    }
+                });
+        }
+        
+        // Event Listeners
+        initialLanguageSelect.addEventListener('change', function() {
+            const language = this.value;
+            if (language) {
+                loadSentences(language);
+                // Reset other selections and clear dropdowns completely
+                sentenceSelect.innerHTML = '<option value="">Select a sentence</option>';
+                sentenceSelect.disabled = true;
+                targetLanguageSelect.innerHTML = '<option value="">Select a language</option>';
+                targetLanguageSelect.disabled = true;
+                targetText.textContent = 'Select a target language';
+                playTargetBtn.disabled = true;
+                initialText.textContent = 'Select a sentence';
+                playInitialBtn.disabled = true;
+                referenceText.textContent = 'English translation will appear here';
+                playReferenceBtn.disabled = true;
+            }
+        });
+        
+        sentenceSelect.addEventListener('change', function() {
+            const sentence = this.value;
+            const initialLanguage = initialLanguageSelect.value;
+            const targetLanguage = targetLanguageSelect.value;
+            
+            if (sentence && initialLanguage) {
+                // Load initial language content
+                loadContent(sentence, initialLanguage, true, false);
+                
+                // Load reference language content (always English)
+                loadContent(sentence, REFERENCE_LANGUAGE, false, true);
+                
+                // Reset and repopulate target language dropdown with all languages
+                targetLanguageSelect.innerHTML = '<option value="">Select a language</option>';
+                
+                // Add languages to target dropdown (excluding source language)
+                Object.keys(allLanguages).forEach(langCode => {
+                    // Skip the source language in target dropdown
+                    if (langCode !== initialLanguage) {
+                        const langName = allLanguages[langCode];
+                        const option = new Option(langName, langCode);
+                        targetLanguageSelect.add(option);
+                    }
+                });
+                
+                targetLanguageSelect.disabled = false;
+                
+                // If a target language is already selected, load that content too
+                if (targetLanguage && targetLanguage !== initialLanguage) {
+                    loadContent(sentence, targetLanguage, false, false);
                 }
             }
-
-            async function fetchTextContent() {
-                const response = await fetch('/get_text_content');
-                const data = await response.json();
-                textContentDiv.innerHTML = data.data1;
+        });
+        
+        targetLanguageSelect.addEventListener('change', function() {
+            const targetLanguage = this.value;
+            const sentence = sentenceSelect.value;
+            const initialLanguage = initialLanguageSelect.value;
+            
+            if (targetLanguage && sentence && initialLanguage && targetLanguage !== initialLanguage) {
+                loadContent(sentence, targetLanguage, false, false);
+            } else if (targetLanguage === initialLanguage) {
+                // Prevent selecting the same language as source
+                this.value = '';
+                alert('Target language cannot be the same as source language');
             }
-
-            function startTranscriptionPolling() {
-                // Clear existing interval if it exists
-                if (transcriptionInterval) {
-                    clearInterval(transcriptionInterval);
+        });
+        
+        playInitialBtn.addEventListener('click', function() {
+            if (initialAudio) {
+                initialAudio.play().catch(e => {
+                    console.error('Error playing audio:', e);
+                    connectionStatus.textContent = 'Error playing audio';
+                    connectionStatus.style.color = 'var(--error)';
+                });
+            }
+        });
+        
+        playReferenceBtn.addEventListener('click', function() {
+            if (referenceAudio) {
+                referenceAudio.play().catch(e => {
+                    console.error('Error playing reference audio:', e);
+                    connectionStatus.textContent = 'Error playing reference audio';
+                    connectionStatus.style.color = 'var(--error)';
+                });
+            }
+        });
+        
+        playTargetBtn.addEventListener('click', function() {
+            if (targetAudio) {
+                targetAudio.play().catch(e => {
+                    console.error('Error playing audio:', e);
+                    connectionStatus.textContent = 'Error playing audio';
+                    connectionStatus.style.color = 'var(--error)';
+                });
+            }
+        });
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // First load the languages
+            loadLanguages();
+            
+            // Set up audio ended event handlers
+            document.addEventListener('click', function() {
+                // Preload audio context on user interaction (for mobile)
+                if (typeof AudioContext !== 'undefined') {
+                    new AudioContext();
                 }
-                // Start a new polling interval
-                transcriptionInterval = setInterval(() => {
-                    fetchTranscription();
-                    fetchTextContent();
-                }, 1000);
-            }
-
-            languageSelect.addEventListener('change', fetchTextContent);
+            });
         });
     </script>
 </body>
